@@ -582,7 +582,47 @@ Implementar o handler HTTP que recebe a requisição, extrai parâmetros, chama 
    }
    ```
 
-4. Registrar provider no `main.go`:
+4. Adicionar métricas Prometheus:
+   ```go
+   import (
+       "github.com/prometheus/client_golang/prometheus"
+       "github.com/prometheus/client_golang/prometheus/promauto"
+   )
+   
+   var (
+       httpRequestsTotal = promauto.NewCounterVec(
+           prometheus.CounterOpts{
+               Name: "http_requests_total",
+               Help: "Total HTTP requests",
+           },
+           []string{"method", "path", "status"},
+       )
+       
+       httpRequestDuration = promauto.NewHistogramVec(
+           prometheus.HistogramOpts{
+               Name: "http_request_duration_seconds",
+               Help: "HTTP request duration",
+           },
+           []string{"method", "path"},
+       )
+   )
+   
+   func (h *WorkoutsHandler) ListWorkouts(w http.ResponseWriter, r *http.Request) {
+       start := time.Now()
+       statusCode := http.StatusOK
+       
+       defer func() {
+           duration := time.Since(start)
+           httpRequestDuration.WithLabelValues("GET", "/workouts").Observe(duration.Seconds())
+           httpRequestsTotal.WithLabelValues("GET", "/workouts", strconv.Itoa(statusCode)).Inc()
+       }()
+       
+       // ... implementação existente ...
+       // Atualizar statusCode conforme necessário (401, 422, 500)
+   }
+   ```
+
+5. Registrar provider no `main.go`:
    ```go
    fx.Provide(
        httphandler.NewWorkoutsHandler,
@@ -597,6 +637,7 @@ Implementar o handler HTTP que recebe a requisição, extrai parâmetros, chama 
 - [ ] Mapeamento para DTOs e response wrapper implementado
 - [ ] Logs estruturados de sucesso e erro implementados
 - [ ] Helpers de parsing e error response implementados
+- [ ] Métricas Prometheus registradas (`http_requests_total`, `http_request_duration_seconds`)
 - [ ] Provider registrado no fx
 - [ ] Código compilável
 
@@ -1075,7 +1116,8 @@ Atualizar a documentação da API com exemplos de requisição/resposta do endpo
 - [ ] Códigos de erro possíveis documentados
 - [ ] Comentários Godoc adicionados nas funções públicas
 - [ ] (Opcional) Documentação detalhada em `docs/api/workouts.md`
-- [ ] Validação: seguir formato de documentação do OpenAPI spec (`.thoughts/mvp-userflow/api-contract.yaml`)
+- [ ] Response schema validado contra `.thoughts/mvp-userflow/api-contract.yaml`
+- [ ] Teste manual com Postman/Insomnia validando contrato OpenAPI
 
 ---
 
@@ -1099,6 +1141,7 @@ Atualizar a documentação da API com exemplos de requisição/resposta do endpo
 **Dependências externas** (bloquantes):
 - ✅ Foundation-infrastructure (migrations, entidades)
 - ✅ Feature AUTH (middleware de autenticação)
+- ✅ Índice `(user_id, created_at)` criado na tabela `workouts`
 
 ---
 

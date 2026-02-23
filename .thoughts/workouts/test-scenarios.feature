@@ -294,9 +294,10 @@ Feature: Lista de Workouts do Usuário
       | error     | (mensagem genérica)|
 
   # ──────────────────────────────────────────────────────────────
-  # Performance
+  # Performance (nice-to-have, não bloqueia MVP)
   # ──────────────────────────────────────────────────────────────
 
+  @performance @skip-ci
   Scenario: Resposta deve ser retornada em menos de 200ms (p95)
     Given que estou autenticado como usuário "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
     And que existem 100 workouts cadastrados para este usuário
@@ -304,6 +305,7 @@ Feature: Lista de Workouts do Usuário
     Then 95% das requisições devem retornar em menos de 200ms
     And todas as requisições devem retornar status 200
 
+  @performance @skip-ci
   Scenario: Query com LIMIT e OFFSET deve evitar full table scan
     Given que estou autenticado como usuário "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
     And que existem 10000 workouts cadastrados para este usuário

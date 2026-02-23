@@ -356,6 +356,11 @@ log.Info().
    - No domínio são strings vazias (go convention)
    - Mapeamento handler → DTO converte string vazia para `nil` pointer
 
+5. **Rate limiting será implementado em feature separada**
+   - Backend-architecture-report define: 100 req/min por `user_id` para endpoints autenticados
+   - Esta feature não implementa rate limiting (será middleware global)
+   - Assumimos que rate limiting será adicionado antes de produção
+
 ---
 
 ## 5) Riscos / Edge Cases
@@ -413,6 +418,7 @@ log.Info().
 1. **Pré-requisitos (bloquantes)**:
    - ✅ Foundation-infrastructure implementada (migrations, entidades, Docker)
    - ✅ Feature AUTH com middleware de autenticação disponível
+   - ✅ Índice `(user_id, created_at)` criado na tabela `workouts` (verificar migration)
 
 2. **Ordem de implementação** (ver `tasks.md`):
    - T01: Criar port WorkoutRepository
