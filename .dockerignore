@@ -1,0 +1,12 @@
+.git
+.github
+.kiro
+.thoughts
+bin/
+coverage.out
+coverage.html
+.env
+.env.local
+*.log
+tmp/
+temp/

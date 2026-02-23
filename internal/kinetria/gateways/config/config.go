@@ -12,6 +12,10 @@ type Config struct {
 	Environment string `envconfig:"ENVIRONMENT" required:"true"`
 
 	RequestTimeout time.Duration `envconfig:"REQUEST_TIMEOUT" default:"5s"`
+
+	DatabaseURL string `envconfig:"DATABASE_URL" required:"true"`
+
+	HTTPPort string `envconfig:"HTTP_PORT" default:"8080"`
 }
 
 func ParseConfigFromEnv() (Config, error) {
