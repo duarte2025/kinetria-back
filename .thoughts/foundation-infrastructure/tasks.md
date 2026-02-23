@@ -83,7 +83,7 @@ Este backlog detalha todas as tarefas atômicas necessárias para implementar a 
 
 ## T03 — Criar migration 002 - workouts table
 
-**Objetivo**: Criar ENUM `workout_status` e tabela `workouts` com relacionamento a `users`.
+**Objetivo**: Criar tabela `workouts` com campos de type, intensity, duration e image_url.
 
 **Arquivos/pacotes prováveis**:
 - `migrations/002_create_workouts.sql` - **CRIAR**
@@ -91,23 +91,21 @@ Este backlog detalha todas as tarefas atômicas necessárias para implementar a 
 **Implementação (passos)**:
 
 1. Criar arquivo `migrations/002_create_workouts.sql`
-2. Criar ENUM: `CREATE TYPE workout_status AS ENUM ('draft', 'published', 'archived');`
-3. Criar tabela `workouts` com:
-   - Colunas: `id UUID PRIMARY KEY`, `user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE`, `name VARCHAR(255) NOT NULL`, `description TEXT`, `status workout_status NOT NULL DEFAULT 'draft'`, `created_at TIMESTAMPTZ`, `updated_at TIMESTAMPTZ`
-4. Criar índices:
+2. Criar tabela `workouts` com:
+   - Colunas: `id UUID PRIMARY KEY`, `user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE`, `name VARCHAR(255) NOT NULL`, `description VARCHAR(500) NOT NULL DEFAULT ''`, `type VARCHAR(50) NOT NULL`, `intensity VARCHAR(50) NOT NULL`, `duration INT NOT NULL DEFAULT 0`, `image_url VARCHAR(500) NOT NULL DEFAULT ''`, `created_at TIMESTAMPTZ`, `updated_at TIMESTAMPTZ`
+3. Criar índices:
    - `CREATE INDEX idx_workouts_user_id ON workouts(user_id);`
-   - `CREATE INDEX idx_workouts_status ON workouts(status);`
-   - `CREATE INDEX idx_workouts_user_status ON workouts(user_id, status);`
+   - `CREATE INDEX idx_workouts_type ON workouts(type);`
+   - `CREATE INDEX idx_workouts_user_type ON workouts(user_id, type);`
 
 **Critério de aceite (testes/checks)**:
 - [ ] Arquivo criado em `migrations/002_create_workouts.sql`
-- [ ] ENUM `workout_status` existe (`\dT` no psql)
 - [ ] Tabela `workouts` existe com todas as colunas
 - [ ] Foreign key para `users(id)` existe com ON DELETE CASCADE
-- [ ] Inserir workout com `user_id` inválido falha (constraint)
-- [ ] Deletar user cascade deleta seus workouts (testar)
+- [ ] Colunas `type`, `intensity`, `duration`, `image_url` existem
+- [ ] Default de `duration = 0` e `image_url = ''` funcionam
 - [ ] Todos os 3 índices existem
-- [ ] Default status é `draft` ao inserir sem especificar
+- [ ] Sem ENUM — validação de type/intensity é responsabilidade do use case
 
 **Dependências**: T02 (users table precisa existir)
 
@@ -115,7 +113,7 @@ Este backlog detalha todas as tarefas atômicas necessárias para implementar a 
 
 ## T04 — Criar migration 003 - exercises table
 
-**Objetivo**: Criar ENUMs de categoria/músculo e tabela `exercises` para catálogo.
+**Objetivo**: Criar tabela `exercises` vinculada a workouts, com muscles JSONB e campos de configuração de série.
 
 **Arquivos/pacotes prováveis**:
 - `migrations/003_create_exercises.sql` - **CRIAR**
@@ -123,32 +121,31 @@ Este backlog detalha todas as tarefas atômicas necessárias para implementar a 
 **Implementação (passos)**:
 
 1. Criar arquivo `migrations/003_create_exercises.sql`
-2. Criar ENUMs:
-   - `CREATE TYPE exercise_category AS ENUM ('strength', 'cardio', 'flexibility', 'balance');`
-   - `CREATE TYPE muscle_group AS ENUM ('chest', 'back', 'legs', 'shoulders', 'arms', 'core', 'full_body');`
-3. Criar tabela `exercises` com:
-   - Colunas: `id UUID PRIMARY KEY`, `name VARCHAR(255) NOT NULL`, `description TEXT`, `category exercise_category NOT NULL`, `primary_muscle_group muscle_group NOT NULL`, `equipment_required VARCHAR(255)`, `difficulty_level INT NOT NULL CHECK (difficulty_level BETWEEN 1 AND 5)`, `video_url VARCHAR(500)`, `thumbnail_url VARCHAR(500)`, `created_at TIMESTAMPTZ`, `updated_at TIMESTAMPTZ`
-4. Criar índices:
-   - `CREATE INDEX idx_exercises_category ON exercises(category);`
-   - `CREATE INDEX idx_exercises_muscle_group ON exercises(primary_muscle_group);`
-   - `CREATE INDEX idx_exercises_difficulty ON exercises(difficulty_level);`
+2. Criar tabela `exercises` com:
+   - Colunas: `id UUID PRIMARY KEY`, `workout_id UUID NOT NULL REFERENCES workouts(id) ON DELETE CASCADE`, `name VARCHAR(255) NOT NULL`, `thumbnail_url VARCHAR(500) NOT NULL DEFAULT '/assets/exercises/generic.png'`, `sets INT NOT NULL DEFAULT 1 CHECK (sets >= 1)`, `reps VARCHAR(20) NOT NULL DEFAULT ''`, `muscles JSONB NOT NULL DEFAULT '[]'`, `rest_time INT NOT NULL DEFAULT 60 CHECK (rest_time >= 0)`, `weight DECIMAL(10,2) NOT NULL DEFAULT 0 CHECK (weight >= 0)`, `order_index INT NOT NULL DEFAULT 0 CHECK (order_index >= 0)`, `created_at TIMESTAMPTZ`, `updated_at TIMESTAMPTZ`
+3. Criar índices:
+   - `CREATE INDEX idx_exercises_workout_id ON exercises(workout_id);`
+   - `CREATE INDEX idx_exercises_order ON exercises(workout_id, order_index);`
+   - `CREATE INDEX idx_exercises_muscles ON exercises USING GIN(muscles);`
 
 **Critério de aceite (testes/checks)**:
 - [ ] Arquivo criado em `migrations/003_create_exercises.sql`
-- [ ] ENUMs `exercise_category` e `muscle_group` existem
 - [ ] Tabela `exercises` existe com todas as colunas
-- [ ] Constraint CHECK em `difficulty_level` funciona (tentar inserir 0 ou 6 falha)
-- [ ] Inserir exercise com category inválida falha
+- [ ] Foreign key para `workouts(id)` existe com ON DELETE CASCADE
+- [ ] `muscles` é JSONB (aceita arrays JSON)
+- [ ] CHECK constraints funcionam (sets >= 1, rest_time >= 0, weight >= 0)
+- [ ] Defaults funcionam: `thumbnail_url`, `sets=1`, `rest_time=60`, `weight=0`, `muscles='[]'`
+- [ ] Índice GIN em `muscles` permite queries como `muscles @> '["chest"]'`
 - [ ] Todos os 3 índices existem
-- [ ] Colunas nullable (equipment_required, video_url, thumbnail_url) aceitam NULL
+- [ ] Sem ENUMs de categoria/músculo — muscles é JSONB livre
 
-**Dependências**: T01 (independente de outras migrations)
+**Dependências**: T03 (workouts table precisa existir)
 
 ---
 
 ## T05 — Criar migration 004 - sessions table
 
-**Objetivo**: Criar ENUM `session_status` e tabela `sessions` relacionada a `users` e `workouts`.
+**Objetivo**: Criar tabela `sessions` com status corretos, `finished_at` e UNIQUE parcial para sessão ativa.
 
 **Arquivos/pacotes prováveis**:
 - `migrations/004_create_sessions.sql` - **CRIAR**
@@ -156,10 +153,10 @@ Este backlog detalha todas as tarefas atômicas necessárias para implementar a 
 **Implementação (passos)**:
 
 1. Criar arquivo `migrations/004_create_sessions.sql`
-2. Criar ENUM: `CREATE TYPE session_status AS ENUM ('in_progress', 'completed', 'cancelled');`
-3. Criar tabela `sessions` com:
-   - Colunas: `id UUID PRIMARY KEY`, `user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE`, `workout_id UUID NOT NULL REFERENCES workouts(id) ON DELETE RESTRICT`, `status session_status NOT NULL DEFAULT 'in_progress'`, `started_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`, `completed_at TIMESTAMPTZ`, `notes TEXT`, `created_at TIMESTAMPTZ`, `updated_at TIMESTAMPTZ`
-4. Criar índices:
+2. Criar tabela `sessions` com:
+   - Colunas: `id UUID PRIMARY KEY`, `user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE`, `workout_id UUID NOT NULL REFERENCES workouts(id) ON DELETE RESTRICT`, `status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'completed', 'abandoned'))`, `notes VARCHAR(1000) NOT NULL DEFAULT ''`, `started_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`, `finished_at TIMESTAMPTZ`, `created_at TIMESTAMPTZ`, `updated_at TIMESTAMPTZ`
+3. Criar índices:
+   - `CREATE UNIQUE INDEX idx_sessions_active_user ON sessions(user_id) WHERE status = 'active';`
    - `CREATE INDEX idx_sessions_user_id ON sessions(user_id);`
    - `CREATE INDEX idx_sessions_status ON sessions(status);`
    - `CREATE INDEX idx_sessions_started_at ON sessions(started_at DESC);`
@@ -167,15 +164,14 @@ Este backlog detalha todas as tarefas atômicas necessárias para implementar a 
 
 **Critério de aceite (testes/checks)**:
 - [ ] Arquivo criado em `migrations/004_create_sessions.sql`
-- [ ] ENUM `session_status` existe
 - [ ] Tabela `sessions` existe com todas as colunas
+- [ ] Status CHECK constraint: aceita `active|completed|abandoned`, rejeita outros
+- [ ] `finished_at` é nullable (NULL = sessão ativa)
 - [ ] Foreign key para `users(id)` com CASCADE
 - [ ] Foreign key para `workouts(id)` com RESTRICT
-- [ ] Tentar deletar workout com session ativa falha (RESTRICT)
-- [ ] Deletar user cascade deleta sessions
-- [ ] `completed_at` é nullable
-- [ ] Todos os 4 índices existem
-- [ ] Default status é `in_progress`
+- [ ] **UNIQUE parcial** funciona: tentar inserir 2 sessions `active` para o mesmo `user_id` falha
+- [ ] Tentar deletar workout com session associada falha (RESTRICT)
+- [ ] Todos os 5 índices existem
 
 **Dependências**: T02 (users), T03 (workouts)
 
@@ -183,7 +179,7 @@ Este backlog detalha todas as tarefas atômicas necessárias para implementar a 
 
 ## T06 — Criar migration 005 - set_records table
 
-**Objetivo**: Criar tabela `set_records` para registrar séries executadas em sessions.
+**Objetivo**: Criar tabela `set_records` com weight em gramas, status, UNIQUE constraint e `recorded_at`.
 
 **Arquivos/pacotes prováveis**:
 - `migrations/005_create_set_records.sql` - **CRIAR**
@@ -192,7 +188,8 @@ Este backlog detalha todas as tarefas atômicas necessárias para implementar a 
 
 1. Criar arquivo `migrations/005_create_set_records.sql`
 2. Criar tabela `set_records` com:
-   - Colunas: `id UUID PRIMARY KEY`, `session_id UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE`, `exercise_id UUID NOT NULL REFERENCES exercises(id) ON DELETE RESTRICT`, `set_number INT NOT NULL CHECK (set_number > 0)`, `reps INT CHECK (reps >= 0)`, `weight_kg DECIMAL(6,2) CHECK (weight_kg >= 0)`, `duration_seconds INT CHECK (duration_seconds >= 0)`, `notes TEXT`, `created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`
+   - Colunas: `id UUID PRIMARY KEY`, `session_id UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE`, `exercise_id UUID NOT NULL REFERENCES exercises(id) ON DELETE RESTRICT`, `set_number INT NOT NULL CHECK (set_number >= 1)`, `weight INT NOT NULL DEFAULT 0 CHECK (weight >= 0)`, `reps INT NOT NULL DEFAULT 0 CHECK (reps >= 0)`, `status VARCHAR(20) NOT NULL DEFAULT 'completed' CHECK (status IN ('completed', 'skipped'))`, `recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`
+   - Constraint: `UNIQUE (session_id, exercise_id, set_number)`
 3. Criar índices:
    - `CREATE INDEX idx_set_records_session_id ON set_records(session_id);`
    - `CREATE INDEX idx_set_records_exercise_id ON set_records(exercise_id);`
@@ -201,22 +198,21 @@ Este backlog detalha todas as tarefas atômicas necessárias para implementar a 
 **Critério de aceite (testes/checks)**:
 - [ ] Arquivo criado em `migrations/005_create_set_records.sql`
 - [ ] Tabela `set_records` existe com todas as colunas
-- [ ] Foreign key para `sessions(id)` com CASCADE
-- [ ] Foreign key para `exercises(id)` com RESTRICT
-- [ ] CHECK constraints funcionam (reps, weight_kg, duration_seconds >= 0, set_number > 0)
-- [ ] Tentar inserir `set_number = 0` falha
-- [ ] Tentar inserir `weight_kg = -5` falha
-- [ ] Campos nullable (reps, weight_kg, duration_seconds) aceitam NULL
-- [ ] Tipo DECIMAL(6,2) armazena peso corretamente (ex: 125.50)
+- [ ] `weight` é INT (gramas, não DECIMAL)
+- [ ] `status` CHECK: aceita `completed|skipped`, rejeita outros
+- [ ] **UNIQUE constraint** `(session_id, exercise_id, set_number)` funciona: inserir duplicata falha
+- [ ] `recorded_at` existe (não `created_at`)
+- [ ] CHECK constraints funcionam (weight >= 0, reps >= 0, set_number >= 1)
+- [ ] Sem `duration_seconds` e `notes` — MVP simplificado
 - [ ] Todos os 3 índices existem
 
-**Dependências**: T04 (sessions), T04 (exercises)
+**Dependências**: T04 (exercises), T05 (sessions)
 
 ---
 
 ## T07 — Criar migration 006 - refresh_tokens table
 
-**Objetivo**: Criar tabela `refresh_tokens` para suportar autenticação JWT.
+**Objetivo**: Criar tabela `refresh_tokens` com `revoked_at` (pointer/nullable) para suportar autenticação JWT.
 
 **Arquivos/pacotes prováveis**:
 - `migrations/006_create_refresh_tokens.sql` - **CRIAR**
@@ -225,20 +221,20 @@ Este backlog detalha todas as tarefas atômicas necessárias para implementar a 
 
 1. Criar arquivo `migrations/006_create_refresh_tokens.sql`
 2. Criar tabela `refresh_tokens` com:
-   - Colunas: `id UUID PRIMARY KEY`, `user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE`, `token_hash VARCHAR(255) NOT NULL UNIQUE`, `expires_at TIMESTAMPTZ NOT NULL`, `revoked BOOLEAN NOT NULL DEFAULT FALSE`, `created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`
+   - Colunas: `id UUID PRIMARY KEY`, `user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE`, `token VARCHAR(255) NOT NULL UNIQUE`, `expires_at TIMESTAMPTZ NOT NULL`, `revoked_at TIMESTAMPTZ`, `created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`
 3. Criar índices:
    - `CREATE INDEX idx_refresh_tokens_user_id ON refresh_tokens(user_id);`
-   - `CREATE INDEX idx_refresh_tokens_token_hash ON refresh_tokens(token_hash);`
+   - `CREATE INDEX idx_refresh_tokens_token ON refresh_tokens(token);`
    - `CREATE INDEX idx_refresh_tokens_expires_at ON refresh_tokens(expires_at);`
-   - `CREATE INDEX idx_refresh_tokens_user_revoked ON refresh_tokens(user_id, revoked);`
+   - `CREATE INDEX idx_refresh_tokens_user_revoked ON refresh_tokens(user_id, revoked_at) WHERE revoked_at IS NULL;`
 
 **Critério de aceite (testes/checks)**:
 - [ ] Arquivo criado em `migrations/006_create_refresh_tokens.sql`
 - [ ] Tabela `refresh_tokens` existe com todas as colunas
-- [ ] Constraint UNIQUE em `token_hash`
-- [ ] Tentar inserir token_hash duplicado falha
+- [ ] Constraint UNIQUE em `token`
+- [ ] `revoked_at` é TIMESTAMPTZ nullable (NULL = token válido)
 - [ ] Foreign key para `users(id)` com CASCADE
-- [ ] Default `revoked = FALSE`
+- [ ] Índice parcial `WHERE revoked_at IS NULL` existe
 - [ ] Todos os 4 índices existem
 
 **Dependências**: T02 (users)
@@ -247,7 +243,7 @@ Este backlog detalha todas as tarefas atômicas necessárias para implementar a 
 
 ## T08 — Criar migration 007 - audit_log table
 
-**Objetivo**: Criar ENUM `audit_action` e tabela `audit_log` para rastreabilidade.
+**Objetivo**: Criar tabela `audit_log` append-only com `action` como VARCHAR livre, `action_data` JSONB e `occurred_at`.
 
 **Arquivos/pacotes prováveis**:
 - `migrations/007_create_audit_log.sql` - **CRIAR**
@@ -255,33 +251,26 @@ Este backlog detalha todas as tarefas atômicas necessárias para implementar a 
 **Implementação (passos)**:
 
 1. Criar arquivo `migrations/007_create_audit_log.sql`
-2. Criar ENUM `audit_action` com valores:
-   - `'user_created', 'user_updated', 'user_deleted'`
-   - `'workout_created', 'workout_updated', 'workout_deleted'`
-   - `'session_started', 'session_completed', 'session_cancelled'`
-   - `'set_recorded', 'set_updated', 'set_deleted'`
-   - `'login', 'logout', 'token_refreshed'`
-3. Criar tabela `audit_log` com:
-   - Colunas: `id UUID PRIMARY KEY`, `user_id UUID REFERENCES users(id) ON DELETE SET NULL`, `action audit_action NOT NULL`, `entity_type VARCHAR(100)`, `entity_id UUID`, `metadata JSONB`, `ip_address INET`, `user_agent TEXT`, `created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`
-4. Criar índices:
-   - `CREATE INDEX idx_audit_log_user_id ON audit_log(user_id);`
-   - `CREATE INDEX idx_audit_log_action ON audit_log(action);`
+2. Criar tabela `audit_log` com:
+   - Colunas: `id UUID PRIMARY KEY`, `user_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT`, `entity_type VARCHAR(100) NOT NULL`, `entity_id UUID NOT NULL`, `action VARCHAR(100) NOT NULL`, `action_data JSONB`, `occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`, `ip_address VARCHAR(45)`, `user_agent TEXT`
+3. Criar índices:
+   - `CREATE INDEX idx_audit_log_user_occurred ON audit_log(user_id, occurred_at DESC);`
    - `CREATE INDEX idx_audit_log_entity ON audit_log(entity_type, entity_id);`
-   - `CREATE INDEX idx_audit_log_created_at ON audit_log(created_at DESC);`
-   - `CREATE INDEX idx_audit_log_metadata ON audit_log USING GIN(metadata);`
+   - `CREATE INDEX idx_audit_log_action_data ON audit_log USING GIN(action_data);`
 
 **Critério de aceite (testes/checks)**:
 - [ ] Arquivo criado em `migrations/007_create_audit_log.sql`
-- [ ] ENUM `audit_action` existe com todos os valores
 - [ ] Tabela `audit_log` existe com todas as colunas
-- [ ] Foreign key para `users(id)` com ON DELETE SET NULL
-- [ ] Deletar user seta `user_id = NULL` no audit log (preserva histórico)
-- [ ] Campo `metadata` é JSONB (aceita JSON válido)
-- [ ] Índice GIN em `metadata` permite queries JSON (ex: `metadata @> '{"key": "value"}'`)
-- [ ] Campo `ip_address` é tipo INET (aceita IPs válidos, rejeita inválidos)
-- [ ] Todos os 5 índices existem
+- [ ] `action` é VARCHAR livre (não ENUM) — aceita qualquer string
+- [ ] `action_data` é JSONB (aceita JSON válido)
+- [ ] `occurred_at` existe (não `created_at`)
+- [ ] Foreign key para `users(id)` com RESTRICT (não SET NULL)
+- [ ] `user_id NOT NULL` (sempre obrigatório)
+- [ ] Índice composto `(user_id, occurred_at DESC)` existe
+- [ ] Índice GIN em `action_data` permite queries JSON
+- [ ] Todos os 3 índices existem
 
-**Dependências**: T02 (users - para foreign key, mas com SET NULL pode ser independente)
+**Dependências**: T02 (users)
 
 ---
 
@@ -321,7 +310,7 @@ Este backlog detalha todas as tarefas atômicas necessárias para implementar a 
 
 ## T10 — Criar entidade Workout no domain
 
-**Objetivo**: Definir entidade `Workout` com relacionamento a `User` e status.
+**Objetivo**: Definir entidade `Workout` com campos type, intensity, duration e image_url.
 
 **Arquivos/pacotes prováveis**:
 - `internal/kinetria/domain/entities/workout.go` - **CRIAR**
@@ -334,26 +323,29 @@ Este backlog detalha todas as tarefas atômicas necessárias para implementar a 
    - `ID WorkoutID`
    - `UserID UserID`
    - `Name string`
-   - `Description string`
-   - `Status vos.WorkoutStatus` (importar de vos - criar stub se ainda não existir)
+   - `Description string` (max 500 chars)
+   - `Type string` (`"FORÇA"|"HIPERTROFIA"|"MOBILIDADE"|"CONDICIONAMENTO"`)
+   - `Intensity string` (`"BAIXA"|"MODERADA"|"ALTA"`)
+   - `Duration int` (minutos, calculado)
+   - `ImageURL string` (default baseado no Type)
    - `CreatedAt time.Time`
    - `UpdatedAt time.Time`
-4. Adicionar imports: `time`, `uuid`, `internal/kinetria/domain/vos`
+4. Adicionar imports: `time`, `uuid`
 
 **Critério de aceite (testes/checks)**:
 - [ ] Arquivo `workout.go` criado
-- [ ] Struct `Workout` possui todos os 7 campos
+- [ ] Struct `Workout` possui todos os 10 campos
 - [ ] `WorkoutID` é type alias de `uuid.UUID`
-- [ ] Campo `Status` usa tipo `vos.WorkoutStatus`
+- [ ] Sem campo `Status` — workouts não têm status
 - [ ] Código compila sem erros
 
-**Dependências**: T09 (User entity para UserID), T14 (WorkoutStatus VO - ou criar stub)
+**Dependências**: T09 (User entity para UserID)
 
 ---
 
 ## T11 — Criar entidade Exercise no domain
 
-**Objetivo**: Definir entidade `Exercise` com categoria, músculo e metadados.
+**Objetivo**: Definir entidade `Exercise` pertencente a um Workout, com muscles JSONB e configuração de série.
 
 **Arquivos/pacotes prováveis**:
 - `internal/kinetria/domain/entities/exercise.go` - **CRIAR**
@@ -364,31 +356,34 @@ Este backlog detalha todas as tarefas atômicas necessárias para implementar a 
 2. Definir `type ExerciseID = uuid.UUID`
 3. Criar struct `Exercise` com campos:
    - `ID ExerciseID`
+   - `WorkoutID WorkoutID`
    - `Name string`
-   - `Description string`
-   - `Category vos.ExerciseCategory`
-   - `PrimaryMuscleGroup vos.MuscleGroup`
-   - `EquipmentRequired string`
-   - `DifficultyLevel int`
-   - `VideoURL string`
-   - `ThumbnailURL string`
+   - `ThumbnailURL string` (default: `/assets/exercises/generic.png`)
+   - `Sets int` (min 1)
+   - `Reps string` (`"8-12"` ou `"10"`)
+   - `Muscles []string` (JSONB, ex: `["chest", "triceps"]`)
+   - `RestTime int` (segundos, default 60)
+   - `Weight float64` (kg, 0 para bodyweight)
+   - `OrderIndex int`
    - `CreatedAt time.Time`
    - `UpdatedAt time.Time`
 
 **Critério de aceite (testes/checks)**:
 - [ ] Arquivo `exercise.go` criado
-- [ ] Struct `Exercise` possui todos os 11 campos
+- [ ] Struct `Exercise` possui todos os 12 campos
 - [ ] `ExerciseID` é type alias de `uuid.UUID`
-- [ ] Campos `Category` e `PrimaryMuscleGroup` usam VOs do pacote `vos`
+- [ ] `WorkoutID` presente (exercise pertence a workout)
+- [ ] `Muscles` é `[]string` (mapeado do JSONB)
+- [ ] Sem campos de catálogo global (category, difficulty, equipment)
 - [ ] Código compila sem erros
 
-**Dependências**: T16, T17 (VOs de ExerciseCategory e MuscleGroup)
+**Dependências**: T09 (UserID), T10 (WorkoutID)
 
 ---
 
 ## T12 — Criar entidade Session no domain
 
-**Objetivo**: Definir entidade `Session` para rastreamento de treinos ativos.
+**Objetivo**: Definir entidade `Session` com status corretos e `FinishedAt` como pointer.
 
 **Arquivos/pacotes prováveis**:
 - `internal/kinetria/domain/entities/session.go` - **CRIAR**
@@ -401,10 +396,10 @@ Este backlog detalha todas as tarefas atômicas necessárias para implementar a 
    - `ID SessionID`
    - `UserID UserID`
    - `WorkoutID WorkoutID`
-   - `Status vos.SessionStatus`
+   - `Status string` (`"active"|"completed"|"abandoned"`)
+   - `Notes string` (max 1000 chars)
    - `StartedAt time.Time`
-   - `CompletedAt *time.Time` (pointer - nullable)
-   - `Notes string`
+   - `FinishedAt *time.Time` (pointer — null = sessão ativa)
    - `CreatedAt time.Time`
    - `UpdatedAt time.Time`
 
@@ -412,17 +407,18 @@ Este backlog detalha todas as tarefas atômicas necessárias para implementar a 
 - [ ] Arquivo `session.go` criado
 - [ ] Struct `Session` possui todos os 9 campos
 - [ ] `SessionID` é type alias de `uuid.UUID`
-- [ ] `CompletedAt` é pointer (`*time.Time`) para representar nullable
-- [ ] Campo `Status` usa `vos.SessionStatus`
+- [ ] `FinishedAt` é pointer (`*time.Time`) — null significa ativa
+- [ ] Status é `string` simples (não VO — validação no use case)
+- [ ] Sem campo `CompletedAt` — substituído por `FinishedAt`
 - [ ] Código compila sem erros
 
-**Dependências**: T09 (UserID), T10 (WorkoutID), T15 (SessionStatus VO)
+**Dependências**: T09 (UserID), T10 (WorkoutID)
 
 ---
 
 ## T13 — Criar entidade SetRecord no domain
 
-**Objetivo**: Definir entidade `SetRecord` para registros de séries.
+**Objetivo**: Definir entidade `SetRecord` com weight em gramas, status e `RecordedAt`.
 
 **Arquivos/pacotes prováveis**:
 - `internal/kinetria/domain/entities/set_record.go` - **CRIAR**
@@ -435,64 +431,68 @@ Este backlog detalha todas as tarefas atômicas necessárias para implementar a 
    - `ID SetRecordID`
    - `SessionID SessionID`
    - `ExerciseID ExerciseID`
-   - `SetNumber int`
-   - `Reps *int` (pointer - nullable)
-   - `WeightKg *float64` (pointer - nullable, usar float64 para DECIMAL)
-   - `DurationSeconds *int` (pointer - nullable)
-   - `Notes string`
-   - `CreatedAt time.Time`
+   - `SetNumber int` (min 1)
+   - `Weight int` (gramas, min 0; use case converte de/para kg)
+   - `Reps int` (min 0, 0 = falha)
+   - `Status string` (`"completed"|"skipped"`)
+   - `RecordedAt time.Time`
 
 **Critério de aceite (testes/checks)**:
 - [ ] Arquivo `set_record.go` criado
-- [ ] Struct `SetRecord` possui todos os 9 campos
+- [ ] Struct `SetRecord` possui todos os 8 campos
 - [ ] `SetRecordID` é type alias de `uuid.UUID`
-- [ ] `Reps`, `WeightKg`, `DurationSeconds` são pointers (nullable)
-- [ ] `WeightKg` é `*float64` (precisão decimal)
-- [ ] `SetNumber` é `int` não-nullable
+- [ ] `Weight` é `int` (gramas) — não float64/DECIMAL
+- [ ] `Status` é `string` (não VO)
+- [ ] `RecordedAt` presente (não `CreatedAt`)
+- [ ] Sem campos `DurationSeconds`, `Notes` — MVP simplificado
 - [ ] Código compila sem erros
 
 **Dependências**: T11 (ExerciseID), T12 (SessionID)
 
 ---
 
-## T14 — Criar Value Object WorkoutStatus
+## T14 — Criar Value Objects WorkoutType e WorkoutIntensity
 
-**Objetivo**: Criar VO `WorkoutStatus` com enum e validação.
+**Objetivo**: Criar VOs para os campos `type` e `intensity` do Workout.
 
 **Arquivos/pacotes prováveis**:
-- `internal/kinetria/domain/vos/workout_status.go` - **CRIAR**
+- `internal/kinetria/domain/vos/workout_type.go` - **CRIAR**
+- `internal/kinetria/domain/vos/workout_intensity.go` - **CRIAR**
 
 **Implementação (passos)**:
 
-1. Criar arquivo `internal/kinetria/domain/vos/workout_status.go`
-2. Definir `type WorkoutStatus string`
-3. Criar constantes:
-   - `WorkoutStatusDraft WorkoutStatus = "draft"`
-   - `WorkoutStatusPublished WorkoutStatus = "published"`
-   - `WorkoutStatusArchived WorkoutStatus = "archived"`
-4. Implementar método `func (s WorkoutStatus) Validate() error`:
-   - Switch case para cada valor válido: retornar `nil`
-   - Default: retornar erro wrapping `errors.ErrMalformedParameters`
-5. Implementar método `func (s WorkoutStatus) String() string`: retornar `string(s)`
+### workout_type.go
+1. Definir `type WorkoutType string`
+2. Criar constantes:
+   - `WorkoutTypeForca WorkoutType = "FORÇA"`
+   - `WorkoutTypeHipertrofia WorkoutType = "HIPERTROFIA"`
+   - `WorkoutTypeMobilidade WorkoutType = "MOBILIDADE"`
+   - `WorkoutTypeCondicionamento WorkoutType = "CONDICIONAMENTO"`
+3. Implementar `Validate() error` e `String() string`
+
+### workout_intensity.go
+1. Definir `type WorkoutIntensity string`
+2. Criar constantes:
+   - `WorkoutIntensityBaixa WorkoutIntensity = "BAIXA"`
+   - `WorkoutIntensityModerada WorkoutIntensity = "MODERADA"`
+   - `WorkoutIntensityAlta WorkoutIntensity = "ALTA"`
+3. Implementar `Validate() error` e `String() string`
 
 **Critério de aceite (testes/checks)**:
-- [ ] Arquivo `workout_status.go` criado
-- [ ] Type `WorkoutStatus` definido como string
-- [ ] 3 constantes criadas (Draft, Published, Archived)
-- [ ] Método `Validate()` retorna `nil` para valores válidos
-- [ ] Método `Validate()` retorna erro para valor inválido (ex: "invalid_status")
-- [ ] Erro wraps `errors.ErrMalformedParameters`
-- [ ] Método `String()` retorna string corretamente
+- [ ] Arquivo `workout_type.go` criado com 4 constantes
+- [ ] Arquivo `workout_intensity.go` criado com 3 constantes
+- [ ] `Validate()` retorna `nil` para valores válidos
+- [ ] `Validate()` retorna erro wrapping `errors.ErrMalformedParameters` para inválidos
 - [ ] Código compila sem erros
 - [ ] **Teste unitário criado** (ver T25)
 
-**Dependências**: Nenhuma (pode ser paralelo)
+**Dependências**: Nenhuma
 
 ---
 
 ## T15 — Criar Value Object SessionStatus
 
-**Objetivo**: Criar VO `SessionStatus` com enum e validação.
+**Objetivo**: Criar VO `SessionStatus` com valores corretos: active, completed, abandoned.
 
 **Arquivos/pacotes prováveis**:
 - `internal/kinetria/domain/vos/session_status.go` - **CRIAR**
@@ -502,15 +502,15 @@ Este backlog detalha todas as tarefas atômicas necessárias para implementar a 
 1. Criar arquivo `internal/kinetria/domain/vos/session_status.go`
 2. Definir `type SessionStatus string`
 3. Criar constantes:
-   - `SessionStatusInProgress SessionStatus = "in_progress"`
+   - `SessionStatusActive SessionStatus = "active"`
    - `SessionStatusCompleted SessionStatus = "completed"`
-   - `SessionStatusCancelled SessionStatus = "cancelled"`
+   - `SessionStatusAbandoned SessionStatus = "abandoned"`
 4. Implementar `Validate()` e `String()` (mesmo padrão de T14)
 
 **Critério de aceite (testes/checks)**:
-- [ ] Arquivo criado com 3 constantes
+- [ ] Arquivo criado com 3 constantes (active, completed, abandoned)
+- [ ] **Sem** `in_progress` e `cancelled` — valores incorretos
 - [ ] Método `Validate()` funciona corretamente
-- [ ] Método `String()` funciona corretamente
 - [ ] Código compila sem erros
 - [ ] **Teste unitário criado** (ver T25)
 
@@ -518,26 +518,24 @@ Este backlog detalha todas as tarefas atômicas necessárias para implementar a 
 
 ---
 
-## T16 — Criar Value Object ExerciseCategory
+## T16 — Criar Value Object SetRecordStatus
 
-**Objetivo**: Criar VO `ExerciseCategory` com enum e validação.
+**Objetivo**: Criar VO `SetRecordStatus` com valores completed e skipped.
 
 **Arquivos/pacotes prováveis**:
-- `internal/kinetria/domain/vos/exercise_category.go` - **CRIAR**
+- `internal/kinetria/domain/vos/set_record_status.go` - **CRIAR**
 
 **Implementação (passos)**:
 
-1. Criar arquivo `internal/kinetria/domain/vos/exercise_category.go`
-2. Definir `type ExerciseCategory string`
+1. Criar arquivo `internal/kinetria/domain/vos/set_record_status.go`
+2. Definir `type SetRecordStatus string`
 3. Criar constantes:
-   - `ExerciseCategoryStrength ExerciseCategory = "strength"`
-   - `ExerciseCategoryCardio ExerciseCategory = "cardio"`
-   - `ExerciseCategoryFlexibility ExerciseCategory = "flexibility"`
-   - `ExerciseCategoryBalance ExerciseCategory = "balance"`
+   - `SetRecordStatusCompleted SetRecordStatus = "completed"`
+   - `SetRecordStatusSkipped SetRecordStatus = "skipped"`
 4. Implementar `Validate()` e `String()`
 
 **Critério de aceite (testes/checks)**:
-- [ ] Arquivo criado com 4 constantes
+- [ ] Arquivo criado com 2 constantes
 - [ ] Validação funciona
 - [ ] Código compila sem erros
 - [ ] **Teste unitário criado** (ver T25)
@@ -546,69 +544,65 @@ Este backlog detalha todas as tarefas atômicas necessárias para implementar a 
 
 ---
 
-## T17 — Criar Value Object MuscleGroup
+## T17 — Criar package constants com defaults e validações
 
-**Objetivo**: Criar VO `MuscleGroup` com enum e validação.
+**Objetivo**: Centralizar constantes de defaults de assets e regras de validação alinhadas à arquitetura.
 
 **Arquivos/pacotes prováveis**:
-- `internal/kinetria/domain/vos/muscle_group.go` - **CRIAR**
+- `internal/kinetria/domain/constants/defaults.go` - **CRIAR**
+- `internal/kinetria/domain/constants/validation.go` - **CRIAR**
 
 **Implementação (passos)**:
 
-1. Criar arquivo `internal/kinetria/domain/vos/muscle_group.go`
-2. Definir `type MuscleGroup string`
-3. Criar constantes (7 valores):
-   - `MuscleGroupChest MuscleGroup = "chest"`
-   - `MuscleGroupBack MuscleGroup = "back"`
-   - `MuscleGroupLegs MuscleGroup = "legs"`
-   - `MuscleGroupShoulders MuscleGroup = "shoulders"`
-   - `MuscleGroupArms MuscleGroup = "arms"`
-   - `MuscleGroupCore MuscleGroup = "core"`
-   - `MuscleGroupFullBody MuscleGroup = "full_body"`
-4. Implementar `Validate()` e `String()`
+### defaults.go
+1. Criar arquivo `defaults.go`
+2. Definir constantes:
+   ```go
+   const (
+       DefaultUserAvatarURL         = "/assets/avatars/default.png"
+       DefaultExerciseThumbnailURL  = "/assets/exercises/generic.png"
+       DefaultWorkoutImageForca          = "/assets/workouts/forca.png"
+       DefaultWorkoutImageHipertrofia    = "/assets/workouts/hipertrofia.png"
+       DefaultWorkoutImageMobilidade     = "/assets/workouts/mobilidade.png"
+       DefaultWorkoutImageCondicionamento = "/assets/workouts/condicionamento.png"
+       DefaultExerciseRestTime      = 60   // segundos
+       DefaultExerciseSets          = 1
+       DefaultSetWeight             = 0    // gramas (bodyweight)
+   )
+   ```
+
+### validation.go
+1. Criar arquivo `validation.go`
+2. Definir constantes de validação:
+   ```go
+   const (
+       MinNameLength        = 1
+       MaxNameLength        = 255
+       MaxDescriptionLength = 500   // para Workout.Description
+       MaxNotesLength       = 1000  // para Session.Notes
+       MinSetNumber         = 1
+       MaxSetNumber         = 20
+       MaxWeight            = 500_000  // gramas (500kg)
+       MaxReps              = 100
+   )
+   ```
 
 **Critério de aceite (testes/checks)**:
-- [ ] Arquivo criado com 7 constantes
-- [ ] Validação funciona
+- [ ] Ambos os arquivos criados
+- [ ] `defaults.go` possui 9 constantes (avatares, thumbnails, imagens de workout, defaults de exercício)
+- [ ] `validation.go` possui 8 constantes
+- [ ] Constante de `DefaultUserAvatarURL` existe
+- [ ] Constantes de `DefaultWorkoutImage*` por tipo existem (Forca, Hipertrofia, Mobilidade, Condicionamento)
+- [ ] `MaxDescriptionLength = 500` e `MaxNotesLength = 1000` (não genérico)
 - [ ] Código compila sem erros
-- [ ] **Teste unitário criado** (ver T25)
 
 **Dependências**: Nenhuma
 
 ---
 
-## T18 — Criar Value Object AuditAction
+## T18 — Criar entidades RefreshToken e AuditLog
 
-**Objetivo**: Criar VO `AuditAction` com enum extenso de ações auditáveis.
-
-**Arquivos/pacotes prováveis**:
-- `internal/kinetria/domain/vos/audit_action.go` - **CRIAR**
-
-**Implementação (passos)**:
-
-1. Criar arquivo `internal/kinetria/domain/vos/audit_action.go`
-2. Definir `type AuditAction string`
-3. Criar constantes (15 valores):
-   - User: `AuditActionUserCreated`, `AuditActionUserUpdated`, `AuditActionUserDeleted`
-   - Workout: `AuditActionWorkoutCreated`, `AuditActionWorkoutUpdated`, `AuditActionWorkoutDeleted`
-   - Session: `AuditActionSessionStarted`, `AuditActionSessionCompleted`, `AuditActionSessionCancelled`
-   - Set: `AuditActionSetRecorded`, `AuditActionSetUpdated`, `AuditActionSetDeleted`
-   - Auth: `AuditActionLogin`, `AuditActionLogout`, `AuditActionTokenRefreshed`
-4. Implementar `Validate()` e `String()`
-
-**Critério de aceite (testes/checks)**:
-- [ ] Arquivo criado com 15 constantes
-- [ ] Validação funciona para todos os valores
-- [ ] Código compila sem erros
-- [ ] **Teste unitário criado** (ver T25)
-
-**Dependências**: Nenhuma
-
----
-
-## T19 — Criar entidades RefreshToken e AuditLog
-
-**Objetivo**: Definir entidades `RefreshToken` e `AuditLog`.
+**Objetivo**: Definir entidades `RefreshToken` com `RevokedAt *time.Time` e `AuditLog` alinhado à arquitetura.
 
 **Arquivos/pacotes prováveis**:
 - `internal/kinetria/domain/entities/refresh_token.go` - **CRIAR**
@@ -622,9 +616,9 @@ Este backlog detalha todas as tarefas atômicas necessárias para implementar a 
 3. Struct `RefreshToken`:
    - `ID RefreshTokenID`
    - `UserID UserID`
-   - `TokenHash string`
+   - `Token string` (hash do token, nunca plaintext)
    - `ExpiresAt time.Time`
-   - `Revoked bool`
+   - `RevokedAt *time.Time` (pointer — null = válido)
    - `CreatedAt time.Time`
 
 ### AuditLog
@@ -632,76 +626,29 @@ Este backlog detalha todas as tarefas atômicas necessárias para implementar a 
 2. Definir `type AuditLogID = uuid.UUID`
 3. Struct `AuditLog`:
    - `ID AuditLogID`
-   - `UserID *UserID` (pointer - nullable)
-   - `Action vos.AuditAction`
-   - `EntityType string`
-   - `EntityID *uuid.UUID` (pointer - nullable)
-   - `Metadata map[string]interface{}` (para JSONB)
+   - `UserID UserID` (não nullable — sempre obrigatório)
+   - `EntityType string` (ex: `"session"`, `"set_record"`)
+   - `EntityID uuid.UUID`
+   - `Action string` (ex: `"created"`, `"updated"`, `"completed"`)
+   - `ActionData json.RawMessage` (estado antes/depois)
+   - `OccurredAt time.Time`
    - `IPAddress string`
    - `UserAgent string`
-   - `CreatedAt time.Time`
 
 **Critério de aceite (testes/checks)**:
 - [ ] Ambos os arquivos criados
-- [ ] `RefreshToken` possui 6 campos
-- [ ] `AuditLog` possui 9 campos
-- [ ] `UserID` e `EntityID` em AuditLog são pointers (nullable)
-- [ ] `Metadata` é `map[string]interface{}` (compatível com JSONB)
+- [ ] `RefreshToken.RevokedAt` é `*time.Time` (pointer, não bool)
+- [ ] `RefreshToken.Token` (não `TokenHash`)
+- [ ] `AuditLog.UserID` é não-nullable (`UserID`, não `*UserID`)
+- [ ] `AuditLog.ActionData` é `json.RawMessage` (não `map[string]interface{}`)
+- [ ] `AuditLog.OccurredAt` (não `CreatedAt`)
 - [ ] Código compila sem erros
 
-**Dependências**: T09 (UserID), T18 (AuditAction VO)
+**Dependências**: T09 (UserID)
 
 ---
 
-## T20 — Criar package constants com defaults e validações
-
-**Objetivo**: Centralizar constantes de defaults e regras de validação.
-
-**Arquivos/pacotes prováveis**:
-- `internal/kinetria/domain/constants/defaults.go` - **CRIAR**
-- `internal/kinetria/domain/constants/validation.go` - **CRIAR**
-
-**Implementação (passos)**:
-
-### defaults.go
-1. Criar arquivo `defaults.go`
-2. Definir constantes:
-   ```go
-   const (
-       DefaultExerciseThumbnail = "/assets/defaults/exercise-placeholder.png"
-       DefaultExerciseVideo     = ""
-       DefaultDifficultyLevel   = 3
-   )
-   ```
-
-### validation.go
-1. Criar arquivo `validation.go`
-2. Definir constantes de validação:
-   ```go
-   const (
-       MinNameLength         = 1
-       MaxNameLength         = 255
-       MinDescriptionLength  = 0
-       MaxDescriptionLength  = 5000
-       MinDifficultyLevel    = 1
-       MaxDifficultyLevel    = 5
-       MinSetNumber          = 1
-       MaxSetNumber          = 100
-   )
-   ```
-
-**Critério de aceite (testes/checks)**:
-- [ ] Ambos os arquivos criados
-- [ ] `defaults.go` possui 3 constantes (Thumbnail, Video, DifficultyLevel)
-- [ ] `validation.go` possui 8 constantes (Min/Max para Name, Description, Difficulty, SetNumber)
-- [ ] Código compila sem erros
-- [ ] Constantes são usáveis em outros pacotes (ex: `constants.DefaultDifficultyLevel`)
-
-**Dependências**: Nenhuma
-
----
-
-## T21 — Atualizar Config com variáveis de banco de dados
+## T19 — Atualizar Config com variáveis de banco de dados
 
 **Objetivo**: Adicionar configurações de DB e HTTP server no gateway config.
 
@@ -755,7 +702,7 @@ Este backlog detalha todas as tarefas atômicas necessárias para implementar a 
 
 ---
 
-## T22 — Criar Database Pool Provider
+## T20 — Criar Database Pool Provider
 
 **Objetivo**: Criar provider Fx para pool de conexões PostgreSQL.
 
@@ -797,11 +744,11 @@ Este backlog detalha todas as tarefas atômicas necessárias para implementar a 
 - [ ] Código compila sem erros
 - [ ] **Teste de integração** (ver T26): com DB real, pool conecta; com DB offline, retorna erro
 
-**Dependências**: T21 (Config com DB vars)
+**Dependências**: T19 (Config com DB vars)
 
 ---
 
-## T23 — Criar Health Check Handler
+## T21 — Criar Health Check Handler
 
 **Objetivo**: Implementar handler HTTP para endpoint `/health`.
 
@@ -848,11 +795,11 @@ Este backlog detalha todas as tarefas atômicas necessárias para implementar a 
 - [ ] Código compila sem erros
 - [ ] **Teste unitário criado** (ver T27)
 
-**Dependências**: T21 (Config)
+**Dependências**: T19 (Config)
 
 ---
 
-## T24 — Registrar providers e rotas no main.go
+## T22 — Registrar providers e rotas no main.go
 
 **Objetivo**: Integrar todos os componentes no Fx DI container e registrar rota `/health`.
 
@@ -915,20 +862,19 @@ Este backlog detalha todas as tarefas atômicas necessárias para implementar a 
 - [ ] Código compila sem erros
 - [ ] **Teste E2E** (ver T28): `go run cmd/kinetria/api/main.go` → `curl /health` → 200 OK
 
-**Dependências**: T21 (Config), T22 (Pool), T23 (Health Handler)
+**Dependências**: T19 (Config), T20 (Pool), T21 (Health Handler)
 
 ---
 
-## T25 — Criar testes unitários para Value Objects
+## T23 — Criar testes unitários para Value Objects
 
-**Objetivo**: Testar validação de todos os VOs (WorkoutStatus, SessionStatus, ExerciseCategory, MuscleGroup, AuditAction).
+**Objetivo**: Testar validação de todos os VOs (WorkoutType, WorkoutIntensity, SessionStatus, SetRecordStatus).
 
 **Arquivos/pacotes prováveis**:
-- `internal/kinetria/domain/vos/workout_status_test.go` - **CRIAR**
+- `internal/kinetria/domain/vos/workout_type_test.go` - **CRIAR**
+- `internal/kinetria/domain/vos/workout_intensity_test.go` - **CRIAR**
 - `internal/kinetria/domain/vos/session_status_test.go` - **CRIAR**
-- `internal/kinetria/domain/vos/exercise_category_test.go` - **CRIAR**
-- `internal/kinetria/domain/vos/muscle_group_test.go` - **CRIAR**
-- `internal/kinetria/domain/vos/audit_action_test.go` - **CRIAR**
+- `internal/kinetria/domain/vos/set_record_status_test.go` - **CRIAR**
 
 **Implementação (passos)**:
 
@@ -936,19 +882,20 @@ Para cada VO, criar arquivo de teste com:
 
 1. **Teste de valores válidos** (table-driven):
    ```go
-   func TestWorkoutStatus_Validate_ValidValues(t *testing.T) {
+   func TestWorkoutType_Validate_ValidValues(t *testing.T) {
        tests := []struct{
-           name   string
-           status WorkoutStatus
+           name string
+           wt   WorkoutType
        }{
-           {"draft", WorkoutStatusDraft},
-           {"published", WorkoutStatusPublished},
-           {"archived", WorkoutStatusArchived},
+           {"forca", WorkoutTypeForca},
+           {"hipertrofia", WorkoutTypeHipertrofia},
+           {"mobilidade", WorkoutTypeMobilidade},
+           {"condicionamento", WorkoutTypeCondicionamento},
        }
        
        for _, tt := range tests {
            t.Run(tt.name, func(t *testing.T) {
-               err := tt.status.Validate()
+               err := tt.wt.Validate()
                if err != nil {
                    t.Errorf("expected no error for %s, got %v", tt.name, err)
                }
@@ -959,11 +906,11 @@ Para cada VO, criar arquivo de teste com:
 
 2. **Teste de valores inválidos**:
    ```go
-   func TestWorkoutStatus_Validate_InvalidValues(t *testing.T) {
-       invalid := WorkoutStatus("invalid_status")
+   func TestWorkoutType_Validate_InvalidValues(t *testing.T) {
+       invalid := WorkoutType("invalid_type")
        err := invalid.Validate()
        if err == nil {
-           t.Error("expected error for invalid status, got nil")
+           t.Error("expected error for invalid type, got nil")
        }
        if !errors.Is(err, errors.ErrMalformedParameters) {
            t.Errorf("expected ErrMalformedParameters, got %v", err)
@@ -973,18 +920,19 @@ Para cada VO, criar arquivo de teste com:
 
 3. **Teste de String()**:
    ```go
-   func TestWorkoutStatus_String(t *testing.T) {
-       status := WorkoutStatusDraft
-       if status.String() != "draft" {
-           t.Errorf("expected 'draft', got '%s'", status.String())
+   func TestWorkoutType_String(t *testing.T) {
+       wt := WorkoutTypeForca
+       if wt.String() != "FORÇA" {
+           t.Errorf("expected 'FORÇA', got '%s'", wt.String())
        }
    }
    ```
 
-Repetir para todos os 5 VOs.
+Repetir para todos os 4 VOs.
 
 **Critério de aceite (testes/checks)**:
-- [ ] 5 arquivos de teste criados (*_test.go)
+- [ ] 4 arquivos de teste criados (*_test.go)
+- [ ] Cada arquivo testa: WorkoutType, WorkoutIntensity, SessionStatus, SetRecordStatus
 - [ ] Cada arquivo testa valores válidos (tabela com todos os casos)
 - [ ] Cada arquivo testa valores inválidos
 - [ ] Cada arquivo testa método `String()`
@@ -992,11 +940,11 @@ Repetir para todos os 5 VOs.
 - [ ] Todos os testes passam (0 failures)
 - [ ] Coverage dos VOs >= 80% (`go test -cover ./internal/kinetria/domain/vos`)
 
-**Dependências**: T14-T18 (VOs implementados)
+**Dependências**: T14-T16 (VOs implementados)
 
 ---
 
-## T26 — Criar teste de integração para Database Pool
+## T24 — Criar teste de integração para Database Pool
 
 **Objetivo**: Testar conexão real com PostgreSQL via Docker.
 
@@ -1054,11 +1002,11 @@ func TestNewDatabasePool_Success(t *testing.T) {
 - [ ] `INTEGRATION_TEST=1 make test` executa e passa (com Docker Compose rodando)
 - [ ] Teste limpa recursos (defer pool.Close())
 
-**Dependências**: T22 (Pool implementado), T01 (Docker Compose para rodar teste)
+**Dependências**: T20 (Pool implementado), T01 (Docker Compose para rodar teste)
 
 ---
 
-## T27 — Criar teste unitário para Health Handler
+## T25 — Criar teste unitário para Health Handler
 
 **Objetivo**: Testar handler `/health` com httptest.
 
@@ -1125,7 +1073,7 @@ func TestHealthHandler(t *testing.T) {
 
 ---
 
-## T28 — Teste E2E: Docker Compose + Health Check
+## T26 — Teste E2E: Docker Compose + Health Check
 
 **Objetivo**: Validar end-to-end que Docker sobe e `/health` responde.
 
@@ -1172,7 +1120,7 @@ func TestHealthHandler(t *testing.T) {
 
 ---
 
-## T29 — Documentar setup e arquitetura no README.md
+## T27 — Documentar setup e arquitetura no README.md
 
 **Objetivo**: Atualizar README.md com instruções completas de Docker, migrations, e estrutura.
 
@@ -1251,15 +1199,14 @@ func TestHealthHandler(t *testing.T) {
    - `AuditLog` - Log de auditoria de ações
 
    ### Value Objects
-   - `WorkoutStatus` - draft, published, archived
-   - `SessionStatus` - in_progress, completed, cancelled
-   - `ExerciseCategory` - strength, cardio, flexibility, balance
-   - `MuscleGroup` - chest, back, legs, shoulders, arms, core, full_body
-   - `AuditAction` - Ações auditáveis (15 tipos)
+   - `WorkoutType` - FORÇA, HIPERTROFIA, MOBILIDADE, CONDICIONAMENTO
+   - `WorkoutIntensity` - BAIXA, MODERADA, ALTA
+   - `SessionStatus` - active, completed, abandoned
+   - `SetRecordStatus` - completed, skipped
 
    ### Constants
-   - `defaults.go` - Valores padrão (thumbnails, difficulty)
-   - `validation.go` - Regras de validação (min/max lengths)
+   - `defaults.go` - Valores padrão de assets (avatares, thumbnails, imagens de workout)
+   - `validation.go` - Regras de validação (min/max lengths, limits)
    ```
 
 4. Atualizar seção de "Testes":
@@ -1296,7 +1243,7 @@ func TestHealthHandler(t *testing.T) {
 
 ---
 
-## T30 — Documentar API (health endpoint)
+## T28 — Documentar API (health endpoint)
 
 **Objetivo**: Documentar o endpoint `/health` no padrão do projeto.
 
@@ -1390,7 +1337,7 @@ Este endpoint é utilizado por:
 
 ---
 
-## T31 — Adicionar comentários Godoc nas entidades e VOs
+## T29 — Adicionar comentários Godoc nas entidades e VOs
 
 **Objetivo**: Documentar entidades e VOs exportados com comentários Godoc.
 
@@ -1416,50 +1363,53 @@ Este endpoint é utilizado por:
 
 2. Para cada VO, adicionar comentário antes do type e constantes:
    ```go
-   // WorkoutStatus representa o status de um plano de treino.
-   // Valores possíveis: draft (rascunho), published (publicado), archived (arquivado).
-   type WorkoutStatus string
+   // WorkoutType representa o tipo de um plano de treino.
+   // Valores possíveis: FORÇA, HIPERTROFIA, MOBILIDADE, CONDICIONAMENTO.
+   type WorkoutType string
    
    const (
-       // WorkoutStatusDraft indica que o workout está em rascunho (não visível para treino).
-       WorkoutStatusDraft WorkoutStatus = "draft"
+       // WorkoutTypeForca indica treino focado em força máxima.
+       WorkoutTypeForca WorkoutType = "FORÇA"
        
-       // WorkoutStatusPublished indica que o workout está publicado (pronto para uso).
-       WorkoutStatusPublished WorkoutStatus = "published"
+       // WorkoutTypeHipertrofia indica treino focado em hipertrofia muscular.
+       WorkoutTypeHipertrofia WorkoutType = "HIPERTROFIA"
        
-       // WorkoutStatusArchived indica que o workout foi arquivado (não mais ativo).
-       WorkoutStatusArchived WorkoutStatus = "archived"
+       // WorkoutTypeMobilidade indica treino focado em mobilidade e flexibilidade.
+       WorkoutTypeMobilidade WorkoutType = "MOBILIDADE"
+       
+       // WorkoutTypeCondicionamento indica treino focado em condicionamento cardiovascular.
+       WorkoutTypeCondicionamento WorkoutType = "CONDICIONAMENTO"
    )
    
-   // Validate verifica se o WorkoutStatus possui um valor válido.
+   // Validate verifica se o WorkoutType possui um valor válido.
    // Retorna ErrMalformedParameters se o valor for inválido.
-   func (s WorkoutStatus) Validate() error {
+   func (t WorkoutType) Validate() error {
        // ...
    }
    ```
 
-3. Aplicar para todas as entidades (7) e VOs (5)
+3. Aplicar para todas as entidades (7) e VOs (4)
 
 4. Gerar e verificar godoc:
    ```bash
    go doc internal/kinetria/domain/entities.User
-   go doc internal/kinetria/domain/vos.WorkoutStatus
+   go doc internal/kinetria/domain/vos.WorkoutType
    ```
 
 **Critério de aceite (testes/checks)**:
 - [ ] Todas as 7 entidades possuem comentário Godoc no struct
-- [ ] Todos os 5 VOs possuem comentário Godoc no type
+- [ ] Todos os 4 VOs possuem comentário Godoc no type
 - [ ] Constantes exportadas possuem comentários explicativos
 - [ ] Métodos exportados (Validate, String) possuem comentários
 - [ ] `go doc` exibe documentação corretamente (testar algumas entidades/VOs)
 - [ ] Comentários seguem convenção Godoc (começam com nome do tipo/função)
 - [ ] Código compila sem erros
 
-**Dependências**: T09-T20 (entidades e VOs implementados)
+**Dependências**: T09-T18 (entidades e VOs implementados)
 
 ---
 
-## T32 — Validação final e checklist de aceite da feature
+## T30 — Validação final e checklist de aceite da feature
 
 **Objetivo**: Executar todos os testes e validar checklist de aceite da feature completa.
 
@@ -1542,37 +1492,35 @@ Este endpoint é utilizado por:
 | T01 | Docker Compose + Dockerfile | Infra | - |
 | T02 | Migration 001 - users | Migration | T01 |
 | T03 | Migration 002 - workouts | Migration | T02 |
-| T04 | Migration 003 - exercises | Migration | T01 |
+| T04 | Migration 003 - exercises | Migration | T03 |
 | T05 | Migration 004 - sessions | Migration | T02, T03 |
 | T06 | Migration 005 - set_records | Migration | T04, T05 |
 | T07 | Migration 006 - refresh_tokens | Migration | T02 |
 | T08 | Migration 007 - audit_log | Migration | T02 |
 | T09 | Entity User | Domain | - |
-| T10 | Entity Workout | Domain | T09, T14 |
-| T11 | Entity Exercise | Domain | T16, T17 |
-| T12 | Entity Session | Domain | T09, T10, T15 |
+| T10 | Entity Workout | Domain | T09 |
+| T11 | Entity Exercise | Domain | T10 |
+| T12 | Entity Session | Domain | T09, T10 |
 | T13 | Entity SetRecord | Domain | T11, T12 |
-| T14 | VO WorkoutStatus | Domain | - |
+| T14 | VOs WorkoutType + WorkoutIntensity | Domain | - |
 | T15 | VO SessionStatus | Domain | - |
-| T16 | VO ExerciseCategory | Domain | - |
-| T17 | VO MuscleGroup | Domain | - |
-| T18 | VO AuditAction | Domain | - |
-| T19 | Entities RefreshToken + AuditLog | Domain | T09, T18 |
-| T20 | Constants (defaults + validation) | Domain | - |
-| T21 | Update Config (DB vars) | Gateway | - |
-| T22 | Database Pool Provider | Gateway | T21 |
-| T23 | Health Check Handler | Gateway | T21 |
-| T24 | Register providers in main.go | Integration | T21, T22, T23 |
-| T25 | Unit tests - VOs | Tests | T14-T18 |
-| T26 | Integration test - Pool | Tests | T22, T01 |
-| T27 | Unit test - Health Handler | Tests | T23 |
-| T28 | E2E test - Docker + Health | Tests | T01-T24 |
-| T29 | Update README - Docker/Migrations | Docs | T28 |
-| T30 | Document /health endpoint | Docs | T23 |
-| T31 | Add Godoc comments | Docs | T09-T20 |
-| T32 | Final validation checklist | Validation | T01-T31 |
+| T16 | VO SetRecordStatus | Domain | - |
+| T17 | Constants (defaults + validation) | Domain | - |
+| T18 | Entities RefreshToken + AuditLog | Domain | T09 |
+| T19 | Update Config (DB vars) | Gateway | - |
+| T20 | Database Pool Provider | Gateway | T19 |
+| T21 | Health Check Handler | Gateway | T19 |
+| T22 | Register providers in main.go | Integration | T19, T20, T21 |
+| T23 | Unit tests - VOs | Tests | T14-T16 |
+| T24 | Integration test - Pool | Tests | T20, T01 |
+| T25 | Unit test - Health Handler | Tests | T21 |
+| T26 | E2E test - Docker + Health | Tests | T01-T22 |
+| T27 | Update README - Docker/Migrations | Docs | T26 |
+| T28 | Document /health endpoint | Docs | T21 |
+| T29 | Add Godoc comments | Docs | T09-T18 |
+| T30 | Final validation checklist | Validation | T01-T29 |
 
-**Total: 32 tarefas**
+**Total: 30 tarefas**
 
 ---
 
@@ -1580,46 +1528,46 @@ Este endpoint é utilizado por:
 
 ### Fase 1: Infraestrutura Base (paralelo possível)
 - T01: Docker Compose
-- T21: Config (DB vars)
-- T20: Constants
+- T19: Config (DB vars)
+- T17: Constants
 
 ### Fase 2: Migrations (sequencial devido a dependências FK)
 - T02: Users table
 - T03: Workouts table
-- T04: Exercises table
+- T04: Exercises table (pertence a workouts)
 - T05: Sessions table
 - T06: Set records table
 - T07: Refresh tokens table
 - T08: Audit log table
 
 ### Fase 3: Domain Layer (paralelo possível)
-- T14-T18: Value Objects (todos em paralelo)
+- T14-T16: Value Objects (em paralelo: WorkoutType/Intensity, SessionStatus, SetRecordStatus)
 - T09: User entity
 - T10: Workout entity
 - T11: Exercise entity
 - T12: Session entity
 - T13: SetRecord entity
-- T19: RefreshToken + AuditLog entities
+- T18: RefreshToken + AuditLog entities
 
 ### Fase 4: Gateway Layer
-- T22: Database Pool Provider
-- T23: Health Check Handler
-- T24: Main.go integration
+- T20: Database Pool Provider
+- T21: Health Check Handler
+- T22: Main.go integration
 
 ### Fase 5: Testes
-- T25: Unit tests (VOs)
-- T27: Unit test (Health)
-- T26: Integration test (Pool)
-- T28: E2E test
+- T23: Unit tests (VOs)
+- T25: Unit test (Health)
+- T24: Integration test (Pool)
+- T26: E2E test
 
 ### Fase 6: Documentação
-- T29: README
-- T30: API docs
-- T31: Godoc comments
-- T32: Final validation
+- T27: README
+- T28: API docs
+- T29: Godoc comments
+- T30: Final validation
 
 ---
 
-**Estimativa total de esforço**: ~16-20 horas (considerando desenvolvimento + testes + documentação)
+**Estimativa total de esforço**: ~14-18 horas (considerando desenvolvimento + testes + documentação)
 
-**Feature pronta quando**: T32 (validação final) estiver completa com todos os checks passando.
+**Feature pronta quando**: T30 (validação final) estiver completa com todos os checks passando.

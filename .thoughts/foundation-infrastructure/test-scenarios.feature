@@ -39,60 +39,68 @@ Feature: Foundation & Infrastructure
     Then the database should have 7 tables created
     And the tables should be: users, workouts, exercises, sessions, set_records, refresh_tokens, audit_log
     And all indexes should be created
-    And all ENUMs should be created
     And no migration errors should occur
 
   Scenario: Migrations create users table with correct schema
     Given migrations have been applied
     When I query the users table schema
-    Then it should have columns: id (UUID), email (VARCHAR UNIQUE), name (VARCHAR), password_hash (VARCHAR), created_at (TIMESTAMPTZ), updated_at (TIMESTAMPTZ)
+    Then it should have columns: id (UUID), email (VARCHAR UNIQUE), name (VARCHAR), password_hash (VARCHAR), profile_image_url (VARCHAR nullable), created_at (TIMESTAMPTZ), updated_at (TIMESTAMPTZ)
     And it should have an index on email
     And id should be the primary key
 
-  Scenario: Migrations create workouts table with correct relationships
+  Scenario: Migrations create workouts table with type and intensity fields
     Given migrations have been applied
     When I query the workouts table schema
     Then it should have a foreign key to users(id) with ON DELETE CASCADE
-    And it should have the workout_status ENUM type
-    And it should have indexes on user_id, status, and (user_id, status)
+    And it should have columns: type (VARCHAR), intensity (VARCHAR), duration (INT), image_url (VARCHAR)
+    And it should have indexes on user_id, type, and (user_id, type)
+    And it should NOT have a status ENUM
 
-  Scenario: Migrations create exercises table with ENUMs
+  Scenario: Migrations create exercises table with workout relationship and JSONB muscles
     Given migrations have been applied
     When I query the exercises table schema
-    Then it should have exercise_category ENUM with values: strength, cardio, flexibility, balance
-    And it should have muscle_group ENUM with values: chest, back, legs, shoulders, arms, core, full_body
-    And difficulty_level should have a CHECK constraint (1-5)
+    Then it should have a foreign key to workouts(id) with ON DELETE CASCADE
+    And muscles should be JSONB type (array of strings)
+    And it should have columns: sets (INT), reps (VARCHAR), rest_time (INT), weight (DECIMAL), order_index (INT)
+    And it should have a GIN index on muscles
+    And it should NOT have exercise_category or muscle_group ENUMs
 
-  Scenario: Migrations create sessions table with status tracking
+  Scenario: Migrations create sessions table with correct status values
     Given migrations have been applied
     When I query the sessions table schema
     Then it should have a foreign key to users(id) with ON DELETE CASCADE
     And it should have a foreign key to workouts(id) with ON DELETE RESTRICT
-    And completed_at should be nullable
-    And status should use session_status ENUM
+    And status should use CHECK constraint with values: active, completed, abandoned
+    And finished_at should be nullable
+    And it should have a UNIQUE partial index on (user_id) WHERE status = 'active'
 
-  Scenario: Migrations create set_records table with validations
+  Scenario: Migrations create set_records table with weight in grams and UNIQUE constraint
     Given migrations have been applied
     When I query the set_records table schema
-    Then reps, weight_kg, and duration_seconds should be nullable
-    And weight_kg should be DECIMAL(6,2)
-    And all numeric fields should have CHECK constraints (>= 0)
-    And set_number should have CHECK constraint (> 0)
+    Then weight should be INT (grams, not DECIMAL)
+    And reps and weight should be NOT NULL with default 0
+    And status should use CHECK constraint with values: completed, skipped
+    And recorded_at should exist (not created_at)
+    And UNIQUE constraint on (session_id, exercise_id, set_number) should exist
+    And set_number should have CHECK constraint (>= 1)
 
-  Scenario: Migrations create refresh_tokens table with security features
+  Scenario: Migrations create refresh_tokens table with revoked_at pointer
     Given migrations have been applied
     When I query the refresh_tokens table schema
-    Then token_hash should be UNIQUE
-    And it should have indexes on user_id, token_hash, expires_at
-    And revoked should default to FALSE
+    Then token should be UNIQUE (column name is "token", not "token_hash")
+    And it should have indexes on user_id, token, expires_at
+    And revoked_at should be TIMESTAMPTZ nullable (not a BOOLEAN)
+    And it should have a partial index on (user_id, revoked_at) WHERE revoked_at IS NULL
 
-  Scenario: Migrations create audit_log table with JSONB support
+  Scenario: Migrations create audit_log table with free-form action and occurred_at
     Given migrations have been applied
     When I query the audit_log table schema
-    Then metadata should be JSONB type
-    And it should have a GIN index on metadata
-    And user_id foreign key should have ON DELETE SET NULL
-    And action should use audit_action ENUM
+    Then action_data should be JSONB type (not "metadata")
+    And it should have a GIN index on action_data
+    And user_id should be NOT NULL with ON DELETE RESTRICT
+    And action should be VARCHAR (not an ENUM)
+    And occurred_at should exist (not created_at)
+    And it should have a composite index on (user_id, occurred_at DESC)
 
   Scenario: Re-running migrations does not cause errors
     Given migrations have already been applied once
@@ -166,104 +174,110 @@ Feature: Foundation & Infrastructure
   Scenario: User entity is defined with correct fields
     Given the domain entities package
     When I inspect the User entity
-    Then it should have fields: ID (UserID), Email (string), Name (string), PasswordHash (string), CreatedAt (time.Time), UpdatedAt (time.Time)
+    Then it should have fields: ID (UserID), Email (string), Name (string), PasswordHash (string), ProfileImageURL (string), CreatedAt (time.Time), UpdatedAt (time.Time)
     And UserID should be an alias of uuid.UUID
 
-  Scenario: Workout entity references User correctly
+  Scenario: Workout entity has type, intensity, duration and image fields
     Given the domain entities package
     When I inspect the Workout entity
     Then it should have a UserID field
-    And it should have a Status field of type WorkoutStatus
+    And it should have fields: Type (string), Intensity (string), Duration (int), ImageURL (string)
+    And it should NOT have a Status field
 
-  Scenario: Exercise entity has all catalog fields
+  Scenario: Exercise entity belongs to a Workout and has JSONB muscles
     Given the domain entities package
     When I inspect the Exercise entity
-    Then it should have Category (ExerciseCategory), PrimaryMuscleGroup (MuscleGroup), DifficultyLevel (int)
-    And it should have optional fields: VideoURL, ThumbnailURL
+    Then it should have a WorkoutID field
+    And it should have Muscles ([]string), Sets (int), Reps (string), RestTime (int), Weight (float64), OrderIndex (int)
+    And it should NOT have Category or PrimaryMuscleGroup fields
 
-  Scenario: Session entity tracks workout progress
+  Scenario: Session entity tracks workout progress with correct status values
     Given the domain entities package
     When I inspect the Session entity
-    Then it should have UserID, WorkoutID, Status (SessionStatus)
-    And it should have StartedAt (time.Time) and CompletedAt (*time.Time)
-    And CompletedAt should be a pointer (nullable)
+    Then it should have UserID, WorkoutID, Status (string)
+    And it should have StartedAt (time.Time) and FinishedAt (*time.Time)
+    And FinishedAt should be a pointer (nullable — null = still active)
+    And status values should be: active, completed, abandoned
 
-  Scenario: SetRecord entity has flexible metrics
+  Scenario: SetRecord entity uses grams for weight and has status
     Given the domain entities package
     When I inspect the SetRecord entity
-    Then Reps, WeightKg, and DurationSeconds should be pointers (nullable)
-    And SetNumber should be required (int, not pointer)
+    Then Weight should be int (grams, not float)
+    And SetNumber, Weight, Reps should be required (not pointers)
+    And Status should exist with values: completed, skipped
+    And RecordedAt should exist (not CreatedAt)
 
-  Scenario: RefreshToken entity supports authentication
+  Scenario: RefreshToken entity uses pointer for revocation tracking
     Given the domain entities package
     When I inspect the RefreshToken entity
-    Then it should have TokenHash (string), ExpiresAt (time.Time), Revoked (bool)
+    Then it should have Token (string — hash), ExpiresAt (time.Time), RevokedAt (*time.Time)
+    And RevokedAt should be a pointer (null = valid token)
 
-  Scenario: AuditLog entity captures events
+  Scenario: AuditLog entity captures events with required user context
     Given the domain entities package
     When I inspect the AuditLog entity
-    Then it should have UserID (*UserID - pointer/nullable), Action (AuditAction)
-    And it should have Metadata (map or interface for JSONB)
+    Then UserID should be required (not pointer)
+    And it should have EntityType (string), EntityID (uuid.UUID), Action (string)
+    And it should have ActionData (json.RawMessage) and OccurredAt (time.Time)
     And it should have IPAddress and UserAgent fields
 
   # =========================================================================
   # Value Objects (VOs)
   # =========================================================================
 
-  Scenario: WorkoutStatus VO has valid enum values
-    Given the WorkoutStatus value object
+  Scenario: WorkoutType VO has valid enum values
+    Given the WorkoutType value object
     When I check the available constants
-    Then it should define: WorkoutStatusDraft, WorkoutStatusPublished, WorkoutStatusArchived
-    And all constants should be of type WorkoutStatus
+    Then it should define: FORÇA, HIPERTROFIA, MOBILIDADE, CONDICIONAMENTO
+    And all constants should be of type WorkoutType
 
-  Scenario: WorkoutStatus validates correct values
-    Given a WorkoutStatus with value "published"
+  Scenario: WorkoutType validates correct values
+    Given a WorkoutType with value "FORÇA"
     When I call Validate()
     Then it should return nil (no error)
 
-  Scenario: WorkoutStatus rejects invalid values
-    Given a WorkoutStatus with value "invalid_status"
+  Scenario: WorkoutType rejects invalid values
+    Given a WorkoutType with value "invalid_type"
     When I call Validate()
     Then it should return an error
     And the error should wrap ErrMalformedParameters
 
-  Scenario: SessionStatus VO has valid enum values
+  Scenario: WorkoutIntensity VO has valid enum values
+    Given the WorkoutIntensity value object
+    When I check the available constants
+    Then it should define: BAIXA, MODERADA, ALTA
+
+  Scenario: SessionStatus VO has correct values
     Given the SessionStatus value object
     When I check the available constants
-    Then it should define: SessionStatusInProgress, SessionStatusCompleted, SessionStatusCancelled
+    Then it should define: active, completed, abandoned
+    And it should NOT define: in_progress or cancelled
 
-  Scenario: ExerciseCategory VO has valid enum values
-    Given the ExerciseCategory value object
+  Scenario: SetRecordStatus VO has valid values
+    Given the SetRecordStatus value object
     When I check the available constants
-    Then it should define: strength, cardio, flexibility, balance
-
-  Scenario: MuscleGroup VO has valid enum values
-    Given the MuscleGroup value object
-    When I check the available constants
-    Then it should define: chest, back, legs, shoulders, arms, core, full_body
-
-  Scenario: AuditAction VO has comprehensive action list
-    Given the AuditAction value object
-    When I check the available constants
-    Then it should define actions for: user (created/updated/deleted), workout (created/updated/deleted), session (started/completed/cancelled), set (recorded/updated/deleted), auth (login/logout/token_refreshed)
+    Then it should define: completed, skipped
 
   # =========================================================================
   # Constants
   # =========================================================================
 
-  Scenario: Default constants are defined
+  Scenario: Default asset constants are defined
     Given the constants package
     When I check the defaults
-    Then DefaultExerciseThumbnail should be defined
-    And DefaultExerciseVideo should be defined
-    And DefaultDifficultyLevel should be 3
+    Then DefaultUserAvatarURL should be "/assets/avatars/default.png"
+    And DefaultExerciseThumbnailURL should be "/assets/exercises/generic.png"
+    And DefaultWorkoutImage* constants should exist for each type (Forca, Hipertrofia, Mobilidade, Condicionamento)
+    And DefaultExerciseRestTime should be 60 (seconds)
 
   Scenario: Validation constants are defined
     Given the constants package
     When I check the validation rules
     Then MinNameLength, MaxNameLength should be defined
-    And MinDifficultyLevel (1), MaxDifficultyLevel (5) should be defined
-    And MinSetNumber, MaxSetNumber should be defined
+    And MaxDescriptionLength should be 500 (for Workout.Description)
+    And MaxNotesLength should be 1000 (for Session.Notes)
+    And MinSetNumber (1), MaxSetNumber (20) should be defined
+    And MaxWeight should be 500_000 (grams)
 
   # =========================================================================
   # Configuration
@@ -315,13 +329,26 @@ Feature: Foundation & Infrastructure
     When I try to delete the workout
     Then the delete should fail with a foreign key constraint error (RESTRICT)
 
-  Scenario: Verify audit log preserves data after user deletion
+  Scenario: Verify only one active session per user is allowed
+    Given migrations are applied
+    And I have a user with ID "user-123" with an active session
+    When I try to insert another active session for the same user
+    Then the insert should fail with a unique constraint violation
+    And the UNIQUE partial index on (user_id) WHERE status = 'active' should be the cause
+
+  Scenario: Verify set_record UNIQUE constraint prevents duplicate sets
+    Given migrations are applied
+    And I have a session-exercise pair
+    When I try to insert two set_records with the same (session_id, exercise_id, set_number)
+    Then the second insert should fail with a unique constraint violation
+
+  Scenario: Verify audit log is preserved even with user restriction
     Given migrations are applied
     And I have a user with ID "user-789"
     And the user has audit log entries
-    When I delete the user
-    Then the audit log entries should remain
-    And the user_id in audit log should be NULL (SET NULL)
+    When I try to delete the user
+    Then the delete should fail with a foreign key constraint error (RESTRICT)
+    And the audit log entries should remain untouched
 
   # =========================================================================
   # Error Handling

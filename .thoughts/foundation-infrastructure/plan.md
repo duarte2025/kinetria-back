@@ -95,6 +95,8 @@ migrations/
 └── 007_create_audit_log.sql
 ```
 
+> **Nota**: Exercises pertencem a um Workout (sem tabela de catálogo global)
+
 #### Esquema Proposto
 
 ##### **001_create_users.sql**
@@ -123,79 +125,85 @@ CREATE INDEX idx_users_email ON users(email);
 
 ##### **002_create_workouts.sql**
 ```sql
-CREATE TYPE workout_status AS ENUM ('draft', 'published', 'archived');
-
 CREATE TABLE workouts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
-    description TEXT,
-    status workout_status NOT NULL DEFAULT 'draft',
+    description VARCHAR(500) NOT NULL DEFAULT '',
+    type VARCHAR(50) NOT NULL,
+    intensity VARCHAR(50) NOT NULL,
+    duration INT NOT NULL DEFAULT 0,
+    image_url VARCHAR(500) NOT NULL DEFAULT '',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_workouts_user_id ON workouts(user_id);
-CREATE INDEX idx_workouts_status ON workouts(status);
-CREATE INDEX idx_workouts_user_status ON workouts(user_id, status);
+CREATE INDEX idx_workouts_type ON workouts(type);
+CREATE INDEX idx_workouts_user_type ON workouts(user_id, type);
 ```
 
 **Decisões**:
-- ENUM para status (segurança de tipo)
+- `type` como VARCHAR validado no use case: `"FORÇA"|"HIPERTROFIA"|"MOBILIDADE"|"CONDICIONAMENTO"`
+- `intensity` como VARCHAR validado no use case: `"BAIXA"|"MODERADA"|"ALTA"`
+- `duration` em minutos (calculado/estimado)
+- `image_url` com default baseado no Type (definido no use case, ex: `/assets/workouts/forca.png`)
+- `description` VARCHAR(500) com limite (não TEXT ilimitado)
+- Sem ENUM de status — workouts são listados/filtrados por type e intensity
 - Foreign key para `users` com CASCADE delete (user deletado = workouts deletados)
-- Índices compostos para queries comuns (filtrar workouts por user + status)
 
 ---
 
 ##### **003_create_exercises.sql**
 ```sql
-CREATE TYPE exercise_category AS ENUM ('strength', 'cardio', 'flexibility', 'balance');
-CREATE TYPE muscle_group AS ENUM ('chest', 'back', 'legs', 'shoulders', 'arms', 'core', 'full_body');
-
 CREATE TABLE exercises (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workout_id UUID NOT NULL REFERENCES workouts(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
-    description TEXT,
-    category exercise_category NOT NULL,
-    primary_muscle_group muscle_group NOT NULL,
-    equipment_required VARCHAR(255),
-    difficulty_level INT NOT NULL CHECK (difficulty_level BETWEEN 1 AND 5),
-    video_url VARCHAR(500),
-    thumbnail_url VARCHAR(500),
+    thumbnail_url VARCHAR(500) NOT NULL DEFAULT '/assets/exercises/generic.png',
+    sets INT NOT NULL DEFAULT 1 CHECK (sets >= 1),
+    reps VARCHAR(20) NOT NULL DEFAULT '',
+    muscles JSONB NOT NULL DEFAULT '[]',
+    rest_time INT NOT NULL DEFAULT 60 CHECK (rest_time >= 0),
+    weight DECIMAL(10,2) NOT NULL DEFAULT 0 CHECK (weight >= 0),
+    order_index INT NOT NULL DEFAULT 0 CHECK (order_index >= 0),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_exercises_category ON exercises(category);
-CREATE INDEX idx_exercises_muscle_group ON exercises(primary_muscle_group);
-CREATE INDEX idx_exercises_difficulty ON exercises(difficulty_level);
+CREATE INDEX idx_exercises_workout_id ON exercises(workout_id);
+CREATE INDEX idx_exercises_order ON exercises(workout_id, order_index);
+CREATE INDEX idx_exercises_muscles ON exercises USING GIN(muscles);
 ```
 
 **Decisões**:
-- Catálogo global de exercícios (sem user_id, compartilhado)
-- ENUMs para categorias e grupos musculares (validação no DB)
-- `difficulty_level` com constraint (1-5)
-- URLs para assets de vídeo/imagem
-- Índices para filtros comuns (categoria, músculo, dificuldade)
+- Exercises **pertencem a um workout** (`workout_id`) — não são catálogo global
+- `muscles` como JSONB array (ex: `["chest", "triceps"]`) — flexível, sem ENUM restritivo
+- `reps` como VARCHAR (ex: `"8-12"` ou `"10"`) — representa faixas ou valores fixos
+- `thumbnail_url` com default `/assets/exercises/generic.png`
+- `rest_time` em segundos, default 60s
+- `weight` em kg, default 0 (bodyweight)
+- `order_index` para ordenação dos exercícios no workout
+- Índice GIN em `muscles` para queries de filtro por músculo
+- Cascade delete: workout deletado = exercises deletados
 
 ---
 
 ##### **004_create_sessions.sql**
 ```sql
-CREATE TYPE session_status AS ENUM ('in_progress', 'completed', 'cancelled');
-
 CREATE TABLE sessions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     workout_id UUID NOT NULL REFERENCES workouts(id) ON DELETE RESTRICT,
-    status session_status NOT NULL DEFAULT 'in_progress',
+    status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'completed', 'abandoned')),
+    notes VARCHAR(1000) NOT NULL DEFAULT '',
     started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    completed_at TIMESTAMPTZ,
-    notes TEXT,
+    finished_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE UNIQUE INDEX idx_sessions_active_user ON sessions(user_id) WHERE status = 'active';
 CREATE INDEX idx_sessions_user_id ON sessions(user_id);
 CREATE INDEX idx_sessions_status ON sessions(status);
 CREATE INDEX idx_sessions_started_at ON sessions(started_at DESC);
@@ -203,10 +211,12 @@ CREATE INDEX idx_sessions_user_status ON sessions(user_id, status);
 ```
 
 **Decisões**:
-- `workout_id` com RESTRICT (evita deletar workout com sessões ativas)
-- `completed_at` nullable (só preenchido quando finalizado)
-- Índice em `started_at DESC` para listar sessões recentes
-- ENUM para status da sessão
+- Status como CHECK constraint em vez de ENUM: `"active"|"completed"|"abandoned"`
+- `finished_at` nullable (pointer — null significa não finalizada ainda)
+- `notes` VARCHAR(1000) com limite (não TEXT ilimitado)
+- **UNIQUE parcial** `(user_id) WHERE status = 'active'`: garante no máximo 1 sessão ativa por usuário
+- `workout_id` com RESTRICT (evita deletar workout com sessões referenciadas)
+- Sem `completed_at` separado — `finished_at` cobre tanto "completed" quanto "abandoned"
 
 ---
 
@@ -216,12 +226,12 @@ CREATE TABLE set_records (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     session_id UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
     exercise_id UUID NOT NULL REFERENCES exercises(id) ON DELETE RESTRICT,
-    set_number INT NOT NULL CHECK (set_number > 0),
-    reps INT CHECK (reps >= 0),
-    weight_kg DECIMAL(6,2) CHECK (weight_kg >= 0),
-    duration_seconds INT CHECK (duration_seconds >= 0),
-    notes TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    set_number INT NOT NULL CHECK (set_number >= 1),
+    weight INT NOT NULL DEFAULT 0 CHECK (weight >= 0),
+    reps INT NOT NULL DEFAULT 0 CHECK (reps >= 0),
+    status VARCHAR(20) NOT NULL DEFAULT 'completed' CHECK (status IN ('completed', 'skipped')),
+    recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (session_id, exercise_id, set_number)
 );
 
 CREATE INDEX idx_set_records_session_id ON set_records(session_id);
@@ -230,11 +240,12 @@ CREATE INDEX idx_set_records_session_exercise ON set_records(session_id, exercis
 ```
 
 **Decisões**:
-- Registros de séries com CASCADE delete (session deletada = sets deletados)
-- `reps`, `weight_kg`, `duration_seconds` todos nullable (depende do tipo de exercício)
-- `set_number` para ordenação (1ª série, 2ª série, etc.)
-- Constraints de validação (valores >= 0)
-- DECIMAL para peso (precisão de 2 casas)
+- `weight` em **gramas** (INT) — evita float/precisão, facilita cálculos; use case converte de/para kg
+- `reps` `INT NOT NULL DEFAULT 0` — 0 significa falha (tentativa sem completar rep)
+- `status` CHECK: `"completed"|"skipped"` (série pulada ou realizada)
+- **UNIQUE constraint** `(session_id, exercise_id, set_number)`: previne duplicatas por retry de client
+- `recorded_at` (não `created_at`) — semântica de quando foi registrada pelo usuário
+- Sem `duration_seconds` e `notes` — simplificado para MVP, pode ser adicionado depois
 
 ---
 
@@ -243,62 +254,56 @@ CREATE INDEX idx_set_records_session_exercise ON set_records(session_id, exercis
 CREATE TABLE refresh_tokens (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    token_hash VARCHAR(255) NOT NULL UNIQUE,
+    token VARCHAR(255) NOT NULL UNIQUE,
     expires_at TIMESTAMPTZ NOT NULL,
-    revoked BOOLEAN NOT NULL DEFAULT FALSE,
+    revoked_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_refresh_tokens_user_id ON refresh_tokens(user_id);
-CREATE INDEX idx_refresh_tokens_token_hash ON refresh_tokens(token_hash);
+CREATE INDEX idx_refresh_tokens_token ON refresh_tokens(token);
 CREATE INDEX idx_refresh_tokens_expires_at ON refresh_tokens(expires_at);
-CREATE INDEX idx_refresh_tokens_user_revoked ON refresh_tokens(user_id, revoked);
+CREATE INDEX idx_refresh_tokens_user_revoked ON refresh_tokens(user_id, revoked_at) WHERE revoked_at IS NULL;
 ```
 
 **Decisões**:
-- `token_hash` único (lookup rápido, segurança - não armazenar token plaintext)
-- `revoked` para invalidação manual (logout, security breach)
-- `expires_at` com índice para cleanup de tokens expirados
-- Índice composto para buscar tokens válidos por usuário
+- `revoked_at TIMESTAMPTZ` nullable (pointer) — null = token válido; preenchido = token revogado
+- Representa **quando** foi revogado (não apenas um booleano) — melhor para auditoria
+- `token` armazena o hash (nunca o plaintext) — campo renomeado de `token_hash` para `token` (o fato de ser hash é detalhe de implementação)
+- Índice parcial em `(user_id, revoked_at) WHERE revoked_at IS NULL` — query eficiente de tokens válidos
+- `expires_at` para cleanup de tokens expirados
 
 ---
 
 ##### **007_create_audit_log.sql**
 ```sql
-CREATE TYPE audit_action AS ENUM (
-    'user_created', 'user_updated', 'user_deleted',
-    'workout_created', 'workout_updated', 'workout_deleted',
-    'session_started', 'session_completed', 'session_cancelled',
-    'set_recorded', 'set_updated', 'set_deleted',
-    'login', 'logout', 'token_refreshed'
-);
-
 CREATE TABLE audit_log (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
-    action audit_action NOT NULL,
-    entity_type VARCHAR(100),
-    entity_id UUID,
-    metadata JSONB,
-    ip_address INET,
-    user_agent TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    entity_type VARCHAR(100) NOT NULL,
+    entity_id UUID NOT NULL,
+    action VARCHAR(100) NOT NULL,
+    action_data JSONB,
+    occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    ip_address VARCHAR(45),
+    user_agent TEXT
 );
 
-CREATE INDEX idx_audit_log_user_id ON audit_log(user_id);
-CREATE INDEX idx_audit_log_action ON audit_log(action);
+CREATE INDEX idx_audit_log_user_occurred ON audit_log(user_id, occurred_at DESC);
 CREATE INDEX idx_audit_log_entity ON audit_log(entity_type, entity_id);
-CREATE INDEX idx_audit_log_created_at ON audit_log(created_at DESC);
-CREATE INDEX idx_audit_log_metadata ON audit_log USING GIN(metadata);
+CREATE INDEX idx_audit_log_action_data ON audit_log USING GIN(action_data);
 ```
 
 **Decisões**:
-- `user_id` com SET NULL (preservar audit mesmo se user deletado)
-- ENUM para ações auditáveis (tipagem segura)
-- `metadata` JSONB para dados flexíveis (contexto adicional)
-- INET para IP (validação de tipo)
-- GIN index no JSONB para queries em metadata
-- Apenas `created_at` (audit log é imutável)
+- `action` como VARCHAR livre — não ENUM (evita migration para cada nova ação): `"created"`, `"updated"`, `"deleted"`, `"completed"`
+- `action_data JSONB` (renomeado de `metadata`) — estado antes/depois ou payload da ação
+- `occurred_at` (renomeado de `created_at`) — semântica de quando o evento ocorreu
+- `user_id NOT NULL` com RESTRICT — audit log sempre tem usuário associado; use case do sistema registra com um user_id de sistema se necessário
+- `entity_type` e `entity_id NOT NULL` — toda entrada de audit tem uma entidade alvo
+- Sem `ip_address INET` — usando VARCHAR(45) para flexibilidade (IPv4 + IPv6 + proxies)
+- Índice composto `(user_id, occurred_at DESC)` para queries de histórico por usuário
+- Sem `created_at` separado — `occurred_at` é o único timestamp relevante
+- Tabela **append-only** (sem UPDATE/DELETE)
 
 ---
 
@@ -428,22 +433,21 @@ coverage.html
 ```
 internal/kinetria/domain/
 ├── entities/
-│   ├── entities.go          # Arquivo existente (atualizar)
+│   ├── entities.go          # Arquivo existente (limpar)
 │   ├── user.go              # User entity
 │   ├── workout.go           # Workout entity
-│   ├── exercise.go          # Exercise entity
+│   ├── exercise.go          # Exercise entity (pertence a workout)
 │   ├── session.go           # Session entity
 │   ├── set_record.go        # SetRecord entity
 │   ├── refresh_token.go     # RefreshToken entity
 │   └── audit_log.go         # AuditLog entity
 ├── vos/
-│   ├── workout_status.go    # WorkoutStatus enum + validation
-│   ├── session_status.go    # SessionStatus enum + validation
-│   ├── exercise_category.go # ExerciseCategory enum + validation
-│   ├── muscle_group.go      # MuscleGroup enum + validation
-│   └── audit_action.go      # AuditAction enum + validation
+│   ├── workout_type.go      # WorkoutType: FORÇA|HIPERTROFIA|MOBILIDADE|CONDICIONAMENTO
+│   ├── workout_intensity.go # WorkoutIntensity: BAIXA|MODERADA|ALTA
+│   ├── session_status.go    # SessionStatus: active|completed|abandoned
+│   └── set_record_status.go # SetRecordStatus: completed|skipped
 └── constants/
-    ├── defaults.go          # Asset defaults (thumbnails, vídeos)
+    ├── defaults.go          # Asset defaults (avatares, thumbnails, imagens workout)
     └── validation.go        # Validation rules (min/max length, ranges)
 ```
 
@@ -461,16 +465,164 @@ import (
 type UserID = uuid.UUID
 
 type User struct {
-    ID           UserID
-    Email        string
+    ID              UserID
+    Email           string
+    Name            string
+    PasswordHash    string
+    ProfileImageURL string    // default: /assets/avatars/default.png
+    CreatedAt       time.Time
+    UpdatedAt       time.Time
+}
+```
+
+##### `entities/workout.go`
+```go
+package entities
+
+import (
+    "time"
+    "github.com/google/uuid"
+)
+
+type WorkoutID = uuid.UUID
+
+type Workout struct {
+    ID          WorkoutID
+    UserID      UserID
+    Name        string
+    Description string    // max 500 chars
+    Type        string    // "FORÇA"|"HIPERTROFIA"|"MOBILIDADE"|"CONDICIONAMENTO"
+    Intensity   string    // "BAIXA"|"MODERADA"|"ALTA"
+    Duration    int       // minutos (calculado)
+    ImageURL    string    // default baseado no Type
+    CreatedAt   time.Time
+    UpdatedAt   time.Time
+}
+```
+
+##### `entities/exercise.go`
+```go
+package entities
+
+import (
+    "time"
+    "github.com/google/uuid"
+)
+
+type ExerciseID = uuid.UUID
+
+type Exercise struct {
+    ID           ExerciseID
+    WorkoutID    WorkoutID
     Name         string
-    PasswordHash string
+    ThumbnailURL string      // default: /assets/exercises/generic.png
+    Sets         int         // min 1
+    Reps         string      // "8-12" ou "10"
+    Muscles      []string    // JSONB, ex: ["chest", "triceps"]
+    RestTime     int         // segundos, default 60
+    Weight       float64     // kg, 0 para bodyweight
+    OrderIndex   int
     CreatedAt    time.Time
     UpdatedAt    time.Time
 }
 ```
 
-##### `vos/workout_status.go`
+##### `entities/session.go`
+```go
+package entities
+
+import (
+    "time"
+    "github.com/google/uuid"
+)
+
+type SessionID = uuid.UUID
+
+type Session struct {
+    ID         SessionID
+    UserID     UserID
+    WorkoutID  WorkoutID
+    Status     string        // "active"|"completed"|"abandoned"
+    Notes      string        // max 1000 chars
+    StartedAt  time.Time
+    FinishedAt *time.Time    // null = não finalizada
+    CreatedAt  time.Time
+    UpdatedAt  time.Time
+}
+```
+
+##### `entities/set_record.go`
+```go
+package entities
+
+import (
+    "time"
+    "github.com/google/uuid"
+)
+
+type SetRecordID = uuid.UUID
+
+type SetRecord struct {
+    ID         SetRecordID
+    SessionID  SessionID
+    ExerciseID ExerciseID
+    SetNumber  int          // min 1
+    Weight     int          // gramas, min 0 (0 = bodyweight)
+    Reps       int          // min 0 (0 = falha)
+    Status     string       // "completed"|"skipped"
+    RecordedAt time.Time
+}
+```
+
+##### `entities/refresh_token.go`
+```go
+package entities
+
+import (
+    "time"
+    "github.com/google/uuid"
+)
+
+type RefreshTokenID = uuid.UUID
+
+type RefreshToken struct {
+    ID        RefreshTokenID
+    UserID    UserID
+    Token     string         // hash do token (nunca plaintext)
+    ExpiresAt time.Time
+    RevokedAt *time.Time     // null = válido
+    CreatedAt time.Time
+}
+```
+
+##### `entities/audit_log.go`
+```go
+package entities
+
+import (
+    "encoding/json"
+    "time"
+    "github.com/google/uuid"
+)
+
+type AuditLogID = uuid.UUID
+
+type AuditLog struct {
+    ID         AuditLogID
+    UserID     UserID           // sempre preenchido
+    EntityType string           // "session", "set_record", "workout"
+    EntityID   uuid.UUID        // ID da entidade afetada
+    Action     string           // "created", "updated", "deleted", "completed"
+    ActionData json.RawMessage  // estado antes/depois ou payload da ação
+    OccurredAt time.Time        // indexed
+    IPAddress  string
+    UserAgent  string
+}
+```
+
+#### VOs e Constants
+
+##### `vos/workout_type.go`
 ```go
 package vos
 
@@ -479,26 +631,72 @@ import (
     "github.com/kinetria/kinetria-back/internal/kinetria/domain/errors"
 )
 
-type WorkoutStatus string
+type WorkoutType string
 
 const (
-    WorkoutStatusDraft     WorkoutStatus = "draft"
-    WorkoutStatusPublished WorkoutStatus = "published"
-    WorkoutStatusArchived  WorkoutStatus = "archived"
+    WorkoutTypeForca          WorkoutType = "FORÇA"
+    WorkoutTypeHipertrofia    WorkoutType = "HIPERTROFIA"
+    WorkoutTypeMobilidade     WorkoutType = "MOBILIDADE"
+    WorkoutTypeCondicionamento WorkoutType = "CONDICIONAMENTO"
 )
 
-func (s WorkoutStatus) Validate() error {
-    switch s {
-    case WorkoutStatusDraft, WorkoutStatusPublished, WorkoutStatusArchived:
+func (t WorkoutType) Validate() error {
+    switch t {
+    case WorkoutTypeForca, WorkoutTypeHipertrofia, WorkoutTypeMobilidade, WorkoutTypeCondicionamento:
         return nil
     default:
-        return fmt.Errorf("%w: invalid workout status '%s'", errors.ErrMalformedParameters, s)
+        return fmt.Errorf("%w: invalid workout type '%s'", errors.ErrMalformedParameters, t)
     }
 }
 
-func (s WorkoutStatus) String() string {
-    return string(s)
-}
+func (t WorkoutType) String() string { return string(t) }
+```
+
+##### `vos/workout_intensity.go`
+```go
+package vos
+
+type WorkoutIntensity string
+
+const (
+    WorkoutIntensityBaixa    WorkoutIntensity = "BAIXA"
+    WorkoutIntensityModerada WorkoutIntensity = "MODERADA"
+    WorkoutIntensityAlta     WorkoutIntensity = "ALTA"
+)
+
+func (i WorkoutIntensity) Validate() error { /* ... */ }
+func (i WorkoutIntensity) String() string  { return string(i) }
+```
+
+##### `vos/session_status.go`
+```go
+package vos
+
+type SessionStatus string
+
+const (
+    SessionStatusActive    SessionStatus = "active"
+    SessionStatusCompleted SessionStatus = "completed"
+    SessionStatusAbandoned SessionStatus = "abandoned"
+)
+
+func (s SessionStatus) Validate() error { /* ... */ }
+func (s SessionStatus) String() string  { return string(s) }
+```
+
+##### `vos/set_record_status.go`
+```go
+package vos
+
+type SetRecordStatus string
+
+const (
+    SetRecordStatusCompleted SetRecordStatus = "completed"
+    SetRecordStatusSkipped   SetRecordStatus = "skipped"
+)
+
+func (s SetRecordStatus) Validate() error { /* ... */ }
+func (s SetRecordStatus) String() string  { return string(s) }
 ```
 
 ##### `constants/defaults.go`
@@ -506,9 +704,15 @@ func (s WorkoutStatus) String() string {
 package constants
 
 const (
-    DefaultExerciseThumbnail = "/assets/defaults/exercise-placeholder.png"
-    DefaultExerciseVideo     = ""
-    DefaultDifficultyLevel   = 3
+    DefaultUserAvatarURL        = "/assets/avatars/default.png"
+    DefaultExerciseThumbnailURL = "/assets/exercises/generic.png"
+    DefaultWorkoutImageForca          = "/assets/workouts/forca.png"
+    DefaultWorkoutImageHipertrofia    = "/assets/workouts/hipertrofia.png"
+    DefaultWorkoutImageMobilidade     = "/assets/workouts/mobilidade.png"
+    DefaultWorkoutImageCondicionamento = "/assets/workouts/condicionamento.png"
+    DefaultExerciseRestTime     = 60    // segundos
+    DefaultExerciseSets         = 1
+    DefaultSetWeight            = 0     // gramas (bodyweight)
 )
 ```
 
@@ -519,21 +723,14 @@ package constants
 const (
     MinNameLength         = 1
     MaxNameLength         = 255
-    MinDescriptionLength  = 0
-    MaxDescriptionLength  = 5000
-    MinDifficultyLevel    = 1
-    MaxDifficultyLevel    = 5
+    MaxDescriptionLength  = 500   // para Workout.Description
+    MaxNotesLength        = 1000  // para Session.Notes
     MinSetNumber          = 1
-    MaxSetNumber          = 100
+    MaxSetNumber          = 20
+    MaxWeight             = 500_000  // gramas (500kg)
+    MaxReps               = 100
 )
 ```
-
-**Decisões Domain**:
-- Type aliases para IDs (`UserID = uuid.UUID`) - type safety
-- VOs com método `Validate()` para business rules
-- Constants centralizados para manutenção fácil
-- Separação clara: entities (dados), vos (regras), constants (valores fixos)
-- Sem dependências externas no domain (puro Go)
 
 ---
 
@@ -767,19 +964,26 @@ fx.Provide(
    - Todos os FKs têm índices
    - Colunas em WHERE/JOIN têm índices
    - Índices compostos para queries comuns
-   - GIN para JSONB (audit_log.metadata)
+   - GIN para JSONB (exercises.muscles e audit_log.action_data)
+   - Índice parcial em sessions (user_id) WHERE status = 'active'
 
 5. **Soft Delete vs Hard Delete**
    - **Hard delete** para MVP (simplicidade)
-   - Audit log preserva histórico (user deletado = user_id SET NULL no audit)
+   - Audit log preserva histórico; user deletado bloqueia delete do audit (RESTRICT)
    - Considerar soft delete em features específicas se necessário
 
-6. **Health Check Inline**
+6. **ENUMs no DB vs Validação no Use Case**
+   - Preferir CHECK constraints simples no DB (sessions.status, set_records.status)
+   - ENUMs de DB foram removidos (workout type/intensity, session status, set status, audit action)
+   - Validação no use case via VOs (WorkoutType, WorkoutIntensity, SessionStatus, SetRecordStatus)
+   - **Motivo**: evitar migrations para adicionar novos valores de ENUM
+
+7. **Health Check Inline**
    - Começar simples sem pkg/xhealth completo
    - Migrar para módulo completo quando necessário
    - MVP: apenas status 200 + JSON básico
 
-7. **Docker Compose para Dev**
+8. **Docker Compose para Dev**
    - Prod usará Kubernetes/ECS (futuro)
    - Dev: Docker Compose é suficiente
    - Migrations aplicadas automaticamente no init
@@ -805,7 +1009,7 @@ fx.Provide(
 |-------|---------------|---------|-----------|
 | **Migrations falharem no Docker init** | Média | Alto | Testar migrations manualmente antes, validar syntax SQL, adicionar rollback scripts |
 | **Connection pool esgotar** | Baixa | Médio | Configurar limites adequados no pgxpool, monitorar conexões ativas |
-| **ENUMs não sincronizados entre DB e Go** | Alta | Médio | Criar testes de validação, documentar processo de adição de novos valores |
+| **VARCHAR check constraints violadas** | Baixa | Baixo | VOs validam no use case antes de persistir; constraints no DB como última linha |
 | **Índices insuficientes** | Média | Médio | Monitorar slow queries, usar EXPLAIN ANALYZE, adicionar índices sob demanda |
 | **Audit log crescer muito** | Alta | Baixo | Implementar particionamento por data (futuro), cleanup de logs antigos |
 | **Health check não verificar DB** | Baixa | Baixo | Aceitável para MVP, adicionar db.Ping() em iteração futura |
@@ -825,17 +1029,22 @@ fx.Provide(
    - Comportamento: FK cascade (refresh_tokens deletados)
    - Logout forçado (esperado)
 
-4. **Audit log com user_id NULL**
-   - Comportamento: ON DELETE SET NULL (preserva audit)
-   - Query por user_id = NULL retorna audits de usuários deletados
+4. **Audit log não pode ser deletado junto com user**
+   - Comportamento: ON DELETE RESTRICT em audit_log.user_id
+   - Requisito: user deve ser "anonimizado" antes de deletado (feature futura)
+   - Razão: rastreabilidade obrigatória
 
 5. **Migrations já aplicadas no re-run**
    - Docker Compose: `/docker-entrypoint-initdb.d` só roda em DB vazio
    - Solução: Para dev, recriar volume (`docker-compose down -v`)
 
 6. **Concorrência em set_records**
-   - Cenário: 2 requests simultâneos criando sets
-   - Mitigação: Transações no repository, idempotency keys (futuro)
+   - Cenário: 2 requests simultâneos criando sets com mesmo (session_id, exercise_id, set_number)
+   - Mitigação: UNIQUE constraint no DB previne duplicatas; segundo request recebe erro de constraint
+
+7. **Sessão duplicada (race condition)**
+   - Cenário: 2 requests simultâneos criando sessão ativa para o mesmo user
+   - Mitigação: UNIQUE partial index em sessions (user_id) WHERE status = 'active'
 
 ---
 
@@ -943,10 +1152,9 @@ Após completar `foundation-infrastructure`, o projeto estará pronto para:
    - Record sets
    - Histórico de treinos
 
-4. **Feature: Exercise Catalog**
-   - Listar exercícios
-   - Filtros por categoria/músculo
-   - Seed inicial de exercícios
+4. **Feature: Exercise Catalog / Seed**
+   - Seed inicial de workouts com exercises pré-configurados
+   - Exercises pertencem a workouts específicos (seed de workouts + exercises juntos)
 
 ---
 
@@ -967,13 +1175,15 @@ Esta feature está **completa** quando:
 - [ ] Migrations aplicadas com sucesso no Postgres
 - [ ] Todas as tabelas existem (`\dt` no psql mostra 7 tabelas)
 - [ ] Todos os índices foram criados corretamente
-- [ ] ENUMs foram criados (workout_status, session_status, etc.)
+- [ ] Sem ENUMs de DB — validação feita via VOs no use case
+- [ ] UNIQUE partial index em sessions(user_id) WHERE status='active'
+- [ ] UNIQUE constraint em set_records(session_id, exercise_id, set_number)
 
 ### Domain Layer
 - [ ] 7 arquivos de entidades criados (`user.go`, `workout.go`, etc.)
-- [ ] 5 arquivos de VOs criados (`workout_status.go`, etc.)
+- [ ] 4 arquivos de VOs criados (`workout_type.go`, `workout_intensity.go`, `session_status.go`, `set_record_status.go`)
 - [ ] VOs possuem método `Validate()` implementado
-- [ ] Arquivo `constants/defaults.go` criado
+- [ ] Arquivo `constants/defaults.go` criado (com defaults de assets)
 - [ ] Arquivo `constants/validation.go` criado
 
 ### Configuration
@@ -1027,12 +1237,11 @@ Esta feature está **completa** quando:
 - [ ] `internal/kinetria/domain/entities/refresh_token.go`
 - [ ] `internal/kinetria/domain/entities/audit_log.go`
 
-#### Value Objects (5 arquivos)
-- [ ] `internal/kinetria/domain/vos/workout_status.go`
+#### Value Objects (4 arquivos)
+- [ ] `internal/kinetria/domain/vos/workout_type.go`
+- [ ] `internal/kinetria/domain/vos/workout_intensity.go`
 - [ ] `internal/kinetria/domain/vos/session_status.go`
-- [ ] `internal/kinetria/domain/vos/exercise_category.go`
-- [ ] `internal/kinetria/domain/vos/muscle_group.go`
-- [ ] `internal/kinetria/domain/vos/audit_action.go`
+- [ ] `internal/kinetria/domain/vos/set_record_status.go`
 
 #### Constants (2 arquivos)
 - [ ] `internal/kinetria/domain/constants/defaults.go`
