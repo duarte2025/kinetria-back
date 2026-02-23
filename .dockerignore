@@ -1,0 +1,21 @@
+# Version control
+.git
+.github
+
+# Project-specific
+.kiro
+.thoughts
+
+# Build artifacts
+bin/
+
+# Test coverage
+coverage.out
+coverage.html
+
+# Environment files
+.env
+.env.local
+
+# Logs
+*.log
