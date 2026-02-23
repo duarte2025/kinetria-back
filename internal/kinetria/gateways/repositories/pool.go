@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kinetria/kinetria-back/internal/kinetria/gateways/config"
@@ -19,7 +20,10 @@ func NewDatabasePool(cfg config.Config) (*pgxpool.Pool, error) {
 		return nil, fmt.Errorf("failed to create database pool: %w", err)
 	}
 
-	if err := pool.Ping(context.Background()); err != nil {
+	pingCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := pool.Ping(pingCtx); err != nil {
 		pool.Close()
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}

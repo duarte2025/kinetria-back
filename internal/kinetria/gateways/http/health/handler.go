@@ -21,7 +21,6 @@ func NewHealthHandler(cfg config.Config) http.HandlerFunc {
 			Version: "undefined",
 		}
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
 		if err := json.NewEncoder(w).Encode(resp); err != nil {
 			http.Error(w, "internal server error", http.StatusInternalServerError)
 		}

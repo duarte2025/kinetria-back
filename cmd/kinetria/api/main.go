@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -44,7 +45,7 @@ func startHTTPServer(lc fx.Lifecycle, cfg config.Config, router chi.Router, heal
 		OnStart: func(ctx context.Context) error {
 			go func() {
 				if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-					return
+					log.Printf("HTTP server error: %v", err)
 				}
 			}()
 			return nil
