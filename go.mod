@@ -9,6 +9,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.8.0
 	github.com/kelseyhightower/envconfig v1.4.0
+	github.com/sqlc-dev/pqtype v0.3.0
 	go.uber.org/fx v1.24.0
 )
 
