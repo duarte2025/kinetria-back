@@ -1,0 +1,12 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    queries: "internal/kinetria/gateways/repositories/queries/queries.sql"
+    schema: "migrations/"
+    gen:
+      go:
+        package: "queries"
+        out: "internal/kinetria/gateways/repositories/queries"
+        emit_json_tags: true
+        emit_interface: false
+        emit_exact_table_names: false

@@ -1,0 +1,8 @@
+-- Adicione suas migrations aqui
+-- Exemplo:
+-- CREATE TABLE IF NOT EXISTS examples (
+--     id UUID PRIMARY KEY,
+--     name TEXT NOT NULL,
+--     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+--     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+-- );

@@ -1,0 +1,7 @@
+-- Adicione suas queries SQLC aqui
+-- Exemplo:
+-- 
+-- -- name: GetExampleByID :one
+-- SELECT id, name, created_at, updated_at
+-- FROM examples
+-- WHERE id = @id;
