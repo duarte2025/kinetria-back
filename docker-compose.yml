@@ -36,6 +36,9 @@ services:
       DB_NAME: kinetria
       DB_SSL_MODE: disable
       HTTP_PORT: 8080
+      JWT_SECRET: 04391c7f9e8f04a0bb1c0d3e592caa6d5f6b869e6a6cb4cd7c2b225be113614b
+      JWT_EXPIRY: 1h
+      REFRESH_TOKEN_EXPIRY: 720h
     ports:
       - "8080:8080"
     depends_on:
