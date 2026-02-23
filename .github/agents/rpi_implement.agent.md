@@ -3,7 +3,6 @@ name: RPI Implement
 description: "Fase Implement (RPI): orquestrador que executa o backlog em .thoughts/<feature|topic>/tasks.md usando o agente RPI Developer e valida criterios de aceite."
 tools: ['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'todo', 'github/*']
 model: Claude Sonnet 4.5 (copilot)
-target: vscode
 argument-hint: "Descreva a feature ou o <feature|topic> a ser implementado."
 ---
 
