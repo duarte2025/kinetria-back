@@ -1,7 +1,16 @@
 package main
 
 import (
+	"context"
+	"fmt"
+	"net/http"
+
+	"github.com/go-chi/chi/v5"
 	"go.uber.org/fx"
+
+	"github.com/kinetria/kinetria-back/internal/kinetria/gateways/config"
+	healthhandler "github.com/kinetria/kinetria-back/internal/kinetria/gateways/http/health"
+	"github.com/kinetria/kinetria-back/internal/kinetria/gateways/repositories"
 )
 
 var (
@@ -13,16 +22,35 @@ var (
 
 func main() {
 	fx.New(
-		// TODO: Adicionar módulos base quando disponíveis
-		// xfx.BaseModule(),
-		// xbuild.Module(AppName, BuildCommit, BuildTime, BuildTag),
-		// xlog.Module(),
-		// xtelemetry.Module(),
-		// xhttp.Module(),
-		// xhealth.Module(),
-
 		fx.Provide(
-		// TODO: Adicionar providers
+			config.ParseConfigFromEnv,
+			repositories.NewDatabasePool,
+			healthhandler.NewHealthHandler,
+			chi.NewRouter,
 		),
+		fx.Invoke(startHTTPServer),
 	).Run()
+}
+
+func startHTTPServer(lc fx.Lifecycle, cfg config.Config, router chi.Router, healthHandler http.HandlerFunc) {
+	router.Get("/health", healthHandler)
+
+	server := &http.Server{
+		Addr:    fmt.Sprintf(":%d", cfg.HTTPPort),
+		Handler: router,
+	}
+
+	lc.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			go func() {
+				if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+					return
+				}
+			}()
+			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			return server.Shutdown(ctx)
+		},
+	})
 }
