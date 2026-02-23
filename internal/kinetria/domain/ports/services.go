@@ -1,7 +1,5 @@
 package ports
 
-import "context"
-
 // Adicione suas interfaces de serviços externos aqui
 // Exemplo:
 // //go:generate moq -stub -pkg mocks -out mocks/services.go . ExternalService
