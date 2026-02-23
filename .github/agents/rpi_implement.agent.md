@@ -21,11 +21,11 @@ Usar o agente `RPI Developer` como executor **por tarefa**, mantendo rastreabili
 
 - Ir para `main`.
 - Fazer `pull` da `main`.
-- Abrir um branch novo no template: `<conventional-commit>/<subject>`.
-   - Ex.: `feat/foo`.
+- Abrir um branch novo no template: `<type>/<scope>/<subject>` (conventional-commit type / escopo / assunto).
+   - Ex.: `feat/webapp/add-login-endpoint`.
 
 Regras:
-- O `application` deve preferencialmente refletir o app/domínio do projeto.
+- O `scope` (aplicação/domínio, por exemplo `webapp`, `api`, `infra`) deve refletir o app/domínio do projeto.
 - O `subject` deve ser curto, kebab-case, e descrever a intenção.
 
 1) Ler e interpretar artefatos do plano

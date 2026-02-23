@@ -46,7 +46,7 @@ Regras:
 ### 0.1) Se houver GitHub Issue informada (condicional)
 Se o usuário informar uma **issue do GitHub** (ex.: URL ou `owner/repo#123`), você DEVE:
 
-1) **Ler a issue primeiro** (título, descrição, labels, comentários relevantes, critérios de aceite implícitos/explicítos) e iniciar o research com as informações de lá.
+1) **Ler a issue primeiro** (título, descrição, labels, comentários relevantes, critérios de aceite implícitos/explícitos) e iniciar o research com as informações de lá.
 2) **Fazer perguntas como comentários na issue**: quando as informações estiverem ambíguas ou faltando, publique suas perguntas diretamente na issue (em PT-BR) usando as tools de GitHub disponíveis.
 
 Regras:

@@ -1,3 +1,9 @@
+---
+name: gopls MCP Server Instructions
+description: Instructions for efficiently working in Go using the gopls MCP server. Covers workspace detection, read workflow, and edit workflow with diagnostics, vulnerability checks, and testing.
+applyTo: '**/*.go'
+---
+
 # The gopls MCP server
 
 These instructions describe how to efficiently work in the Go programming language using the gopls MCP server. You can load this file directly into a session where the gopls MCP server is connected.
