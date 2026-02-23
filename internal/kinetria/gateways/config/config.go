@@ -33,5 +33,8 @@ func ParseConfigFromEnv() (Config, error) {
 	if err := envconfig.Process("", &cfg); err != nil {
 		return Config{}, fmt.Errorf("failed to parse config: %w", err)
 	}
+	if len(cfg.JWTSecret) < 32 {
+		return Config{}, fmt.Errorf("JWT_SECRET must be at least 32 characters, got %d", len(cfg.JWTSecret))
+	}
 	return cfg, nil
 }
