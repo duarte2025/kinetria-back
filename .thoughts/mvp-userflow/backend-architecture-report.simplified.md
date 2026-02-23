@@ -12,7 +12,7 @@ MVP de plataforma de treinos com:
 **Kinetria Backend Platform**: serviço REST monolítico modular em Go que gerencia o domínio completo de treinos e usuários.
 
 ### Interfaces
-- **HTTP REST** (`/api/v1`): 13 endpoints públicos (auth, home, workouts, sessions)
+- **HTTP REST** (`/api/v1`): 11 endpoints públicos (auth, dashboard, workouts, sessions)
 - **Autenticação**: JWT Bearer
 - **Persistência**: PostgreSQL via SQLC
 - **Clientes**: apps mobile (iOS/Android), web app (futuro), integrações externas (futuro)
@@ -382,9 +382,43 @@ log.Info().
 
 ---
 
-### Checklist de produção
+## 9) Checklist de Implementação
 
-Antes de deploy:
+### Funcionalidades
+
+- [ ] POST /auth/register
+- [ ] POST /auth/login
+- [ ] POST /auth/refresh
+- [ ] POST /auth/logout
+- [ ] GET /workouts
+- [ ] GET /workouts/:id
+- [ ] POST /sessions
+- [ ] POST /sessions/:id/sets
+- [ ] PATCH /sessions/:id/finish
+- [ ] PATCH /sessions/:id/abandon
+- [ ] GET /dashboard
+
+### Infraestrutura
+
+- [ ] Migration: users
+- [ ] Migration: workouts
+- [ ] Migration: exercises
+- [ ] Migration: sessions
+- [ ] Migration: set_records
+- [ ] Migration: refresh_tokens
+- [ ] Migration: audit_log
+- [ ] Docker Compose (PostgreSQL)
+- [ ] Seed data (workouts)
+- [ ] Rate limiting
+- [ ] JWT middleware
+- [ ] Audit log em mutações
+- [ ] Logs estruturados (zerolog)
+- [ ] Métricas Prometheus
+- [ ] Healthcheck /health
+- [ ] Testes cobertura > 70%
+
+### Produção
+
 - [ ] Migrations aplicadas com sucesso
 - [ ] Índices criados: `user_id`, `workout_id`, `session_id`, `(user_id, occurred_at)` em audit_log
 - [ ] Constraints: UNIQUE, FK, CHECK configurados
@@ -399,55 +433,16 @@ Antes de deploy:
 
 ---
 
-## 9) Próximos Passos Imediatos
-
-### 🚀 Para começar HOJE
-
-1. **Criar branch**: `feature/mvp-backend-foundation`
-
-2. **Primeira task**: Criar migrations SQL
-   ```sql
-   -- migrations/001_create_users.sql
-   -- migrations/002_create_workouts.sql
-   -- migrations/003_create_sessions.sql
-   -- migrations/004_create_audit_log.sql
-   ```
-
-3. **Configurar dev env**: `docker-compose.yml` com PostgreSQL
-
-4. **Implementar AUTH** (primeiro endpoint funcional)
-
-5. **Critério de "done"**:
-   - ✅ Código segue `.github/instructions/global.instructions.md`
-   - ✅ Testes passando
-   - ✅ `make lint` sem warnings
-   - ✅ PR reviewed
-
----
-
-### Meta do MVP (6-8 semanas)
-
-**Funcionalidades obrigatórias**:
-- ✅ Usuário registra, faz login e gerencia tokens
-- ✅ Usuário lista workouts (seed data)
-- ✅ Usuário inicia sessão de treino
-- ✅ Usuário registra séries com peso/reps
-- ✅ Usuário finaliza ou abandona sessão
-- ✅ API dashboard retorna stats, sessão ativa e treinos recentes (client-agnostic)
-- ✅ **Audit log completo** de todas as ações do usuário
-- ✅ API RESTful documentada (OpenAPI) e pronta para múltiplos clientes
-
-**NFRs obrigatórios**:
-- ✅ API responde em < 200ms (p95)
-- ✅ Cobertura de testes > 70%
-- ✅ Zero crashes em 100 req/s por 5 min
-
----
-
 **Documento gerado em**: 2026-02-23  
-**Versão**: 3.0 (simplified - CRUD + Audit Log)  
+**Versão**: 3.2 (revisado)  
 **Status**: ✅ Decisão tomada — pronto para implementação  
 **Próxima revisão**: após Sprint 1
+
+**Changelog v3.2 (revisão)**:
+- 🔧 Corrigido: contagem de endpoints (11, não 13)
+- 🔧 Corrigido: referência "home" → "dashboard" na seção 1
+- 🔧 Consolidado: checklist de produção dentro da seção 9
+- 📐 Estrutura: documento mais limpo e consistente
 
 **Changelog v3.1 (platform-centric)**:
 - 🔄 **Mudança de escopo**: BFF mobile-only → Backend Platform multi-client
