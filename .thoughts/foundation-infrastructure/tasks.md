@@ -64,7 +64,7 @@ Este backlog detalha todas as tarefas atômicas necessárias para implementar a 
 
 1. Criar arquivo `migrations/001_create_users.sql`
 2. Adicionar CREATE TABLE users com:
-   - Colunas: `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`, `email VARCHAR(255) NOT NULL UNIQUE`, `name VARCHAR(255) NOT NULL`, `password_hash VARCHAR(255) NOT NULL`, `created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`, `updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`
+   - Colunas: `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`, `email VARCHAR(255) NOT NULL UNIQUE`, `name VARCHAR(255) NOT NULL`, `password_hash VARCHAR(255) NOT NULL`, `profile_image_url VARCHAR(500)`, `created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`, `updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`
 3. Adicionar índice: `CREATE INDEX idx_users_email ON users(email);`
 4. Adicionar comentários explicativos no SQL
 
@@ -302,6 +302,7 @@ Este backlog detalha todas as tarefas atômicas necessárias para implementar a 
    - `Email string`
    - `Name string`
    - `PasswordHash string`
+   - `ProfileImageURL string`
    - `CreatedAt time.Time`
    - `UpdatedAt time.Time`
 4. Adicionar imports necessários: `time`, `github.com/google/uuid`
@@ -309,7 +310,7 @@ Este backlog detalha todas as tarefas atômicas necessárias para implementar a 
 
 **Critério de aceite (testes/checks)**:
 - [ ] Arquivo `user.go` criado
-- [ ] Struct `User` possui todos os 6 campos
+- [ ] Struct `User` possui todos os 7 campos
 - [ ] `UserID` é type alias de `uuid.UUID`
 - [ ] Código compila sem erros (`go build ./internal/kinetria/domain/entities`)
 - [ ] Arquivo `entities.go` não possui comentários de exemplo

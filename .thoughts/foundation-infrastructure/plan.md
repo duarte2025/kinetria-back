@@ -104,6 +104,7 @@ CREATE TABLE users (
     email VARCHAR(255) NOT NULL UNIQUE,
     name VARCHAR(255) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
+    profile_image_url VARCHAR(500),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -115,6 +116,7 @@ CREATE INDEX idx_users_email ON users(email);
 - `id` como UUID para distribuição e segurança
 - `email` único com índice para lookup rápido
 - `password_hash` armazenado com bcrypt (não plaintext)
+- `profile_image_url` nullable (usuário pode não ter foto de perfil)
 - `created_at/updated_at` para auditoria temporal
 
 ---
