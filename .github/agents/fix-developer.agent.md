@@ -20,9 +20,9 @@ Quando o input for um artefato local (ex.: `.thoughts/<feature|topic>/review-rep
 
 0) Triagem por PR (quando aplicável)
 - Se o usuário informar um PR (URL ou `owner/repo#<número>`), você DEVE:
-	- Ler o PR (descrição + arquivos alterados, se necessário)
-	- Coletar comentários (review comments e comentários gerais)
-	- Consolidar os itens acionáveis (um item por comentário/solicitação)
+  - Ler o PR (descrição + arquivos alterados, se necessário)
+  - Coletar comentários (review comments e comentários gerais)
+  - Consolidar os itens acionáveis (um item por comentário/solicitação)
 
 0.1) TODO list (obrigatório)
 - Use a tool `todo` para criar uma lista de tarefas baseada nos comentários do PR (ou nos itens do review-report).
