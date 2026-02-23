@@ -1,0 +1,297 @@
+================================================================================
+PLANNING PHASE - FOUNDATION-INFRASTRUCTURE
+Status: ✅ COMPLETE
+Date: 2024-02-23
+================================================================================
+
+PHASE: Plan (Research → Plan → Implement)
+
+================================================================================
+INPUTS ANALYZED
+================================================================================
+
+Repository Structure:
+✓ /home/runner/work/kinetria-back/kinetria-back
+✓ Hexagonal architecture (internal/kinetria/domain + gateways)
+✓ Fx DI configured (cmd/kinetria/api/main.go)
+✓ SQLC configured (sqlc.yaml)
+✓ Makefile with build/test/sqlc/mocks commands
+✓ Go 1.25.0, Chi v5, PGX v5, Validator, UUID, Envconfig
+
+Existing Files Analyzed:
+✓ NEXT_STEPS.md - Initial setup guide
+✓ README.md - Architecture documentation
+✓ cmd/kinetria/api/main.go - Entry point (skeleton)
+✓ internal/kinetria/domain/ - Domain structure (empty templates)
+✓ internal/kinetria/gateways/ - Gateway structure (scaffolded)
+✓ sqlc.yaml - SQLC configuration
+✓ migrations/ - Empty directory
+✓ Makefile - Build commands
+✓ .env.example - Config template
+✓ .thoughts/mvp-userflow/api-contract.yaml - API contract reference
+
+Current State:
+✓ Greenfield scaffold - no features implemented yet
+✓ No migrations, entities, VOs, handlers, or repositories
+✓ Docker/Docker Compose does not exist
+✓ Health check commented out in main.go
+✓ Database pool not configured
+
+================================================================================
+OUTPUTS CREATED
+================================================================================
+
+1. README.md (5.2 KB)
+   Purpose: Quick reference summary
+   Contains:
+   - Objectives and key deliverables
+   - 32 tasks organized in 6 phases
+   - Effort estimate (16-20 hours)
+   - Acceptance criteria
+   - Architectural decisions
+
+2. plan.md (31.6 KB)
+   Purpose: Comprehensive architectural plan
+   Contains:
+   - Section 1: Inputs used
+   - Section 2: AS-IS analysis (current state)
+   - Section 3: TO-BE proposal (detailed design)
+     • 3.1: Database migrations (7 tables with full schemas)
+     • 3.2: Docker Compose + Dockerfile
+     • 3.3: Domain entities + VOs + Constants
+     • 3.4: Health check endpoint
+     • 3.5: Config updates
+     • 3.6: Database pool provider
+   - Section 4: Decisions and assumptions
+   - Section 5: Risks and edge cases
+   - Section 6: Rollout and compatibility
+   - Section 7: External dependencies
+   - Section 8: Next steps after this feature
+   - Section 9: Acceptance criteria
+   - Section 10: Implementation checklist
+
+3. test-scenarios.feature (16.6 KB)
+   Purpose: BDD test scenarios in Gherkin format
+   Contains:
+   - Docker & Database Infrastructure scenarios (4)
+   - Database Migrations scenarios (10)
+   - Database Connection Pool scenarios (3)
+   - Health Check Endpoint scenarios (3)
+   - Domain Entities scenarios (7)
+   - Value Objects scenarios (6)
+   - Constants scenarios (2)
+   - Configuration scenarios (3)
+   - Integration Tests scenarios (3)
+   - Error Handling scenarios (2)
+   - Performance & Observability scenarios (2)
+   - Docker Cleanup scenarios (2)
+   Total: 47 BDD scenarios covering all aspects
+
+4. tasks.md (54.4 KB)
+   Purpose: Executable task backlog
+   Contains:
+   - 32 atomic tasks (T01-T32)
+   - Each task includes:
+     • Objective
+     • Files/packages to create/modify
+     • Implementation steps (detailed)
+     • Acceptance criteria (with checkboxes)
+     • Dependencies
+   - Organized in 6 phases:
+     • Phase 1: Infrastructure Base (3 tasks)
+     • Phase 2: Database Migrations (7 tasks)
+     • Phase 3: Domain Layer (11 tasks)
+     • Phase 4: Gateway Layer (3 tasks)
+     • Phase 5: Testing (4 tasks)
+     • Phase 6: Documentation (4 tasks)
+   - Dependency matrix
+   - Suggested implementation order
+   - Effort estimate
+
+Total Documentation: 107.8 KB
+
+================================================================================
+DELIVERABLES PLANNED
+================================================================================
+
+Infrastructure:
+☐ docker-compose.yml (Postgres 16 + Go app)
+☐ Dockerfile (multi-stage build)
+☐ .dockerignore
+
+Database Migrations (7 files):
+☐ 001_create_users.sql
+☐ 002_create_workouts.sql
+☐ 003_create_exercises.sql
+☐ 004_create_sessions.sql
+☐ 005_create_set_records.sql
+☐ 006_create_refresh_tokens.sql
+☐ 007_create_audit_log.sql
+
+Domain Entities (7 files):
+☐ user.go
+☐ workout.go
+☐ exercise.go
+☐ session.go
+☐ set_record.go
+☐ refresh_token.go
+☐ audit_log.go
+
+Value Objects (5 files):
+☐ workout_status.go
+☐ session_status.go
+☐ exercise_category.go
+☐ muscle_group.go
+☐ audit_action.go
+
+Constants (2 files):
+☐ defaults.go
+☐ validation.go
+
+Gateways (2 files):
+☐ pool.go (database connection pool)
+☐ health/handler.go (health check handler)
+
+Tests (5 files):
+☐ vos/*_test.go (unit tests for VOs)
+☐ pool_test.go (integration test)
+☐ health/handler_test.go (unit test)
+☐ E2E test (manual/automated)
+
+Documentation Updates (5 files):
+☐ entities.go (cleanup)
+☐ config.go (add DB vars)
+☐ .env.example (add DB vars)
+☐ main.go (register providers)
+☐ README.md (Docker + migrations docs)
+
+Total: 31 files to create/modify
+
+================================================================================
+KEY ARCHITECTURAL DECISIONS
+================================================================================
+
+1. PostgreSQL 16 with ENUMs for type safety
+2. UUID primary keys for distributed compatibility
+3. Foreign key strategies: CASCADE for owned data, RESTRICT for references
+4. JSONB with GIN index for flexible audit metadata
+5. Multi-stage Docker build for production efficiency
+6. Health check inline (MVP approach, will evolve to pkg/xhealth)
+7. Hard delete for MVP (audit log preserves history via SET NULL)
+8. No ORM - SQLC for type-safe SQL queries
+9. Value Objects with Validate() methods for business rules
+10. Type aliases for IDs (UserID = uuid.UUID) for type safety
+
+================================================================================
+TESTING STRATEGY
+================================================================================
+
+Unit Tests:
+☐ All 5 VOs with table-driven tests
+☐ Valid values test (all enum constants)
+☐ Invalid values test (ErrMalformedParameters)
+☐ String() method test
+☐ Health handler test (httptest)
+
+Integration Tests:
+☐ Database pool connection test (with Docker)
+☐ Database pool failure test (wrong credentials)
+
+E2E Tests:
+☐ Docker Compose up + health check + DB verification
+☐ Migration application test
+☐ Cascade delete test (User → Workouts)
+☐ Restrict delete test (Workout with Sessions)
+☐ Audit log preservation test (SET NULL on user delete)
+
+Target Coverage: >=70%
+
+================================================================================
+COMPLIANCE WITH PROJECT PATTERNS
+================================================================================
+
+✓ Hexagonal Architecture (domain → ports → gateways)
+✓ Fx Dependency Injection (providers + lifecycle hooks)
+✓ SQLC for queries (configured, ready to use)
+✓ Chi v5 router (already in use)
+✓ PGX v5 for PostgreSQL (connection pool)
+✓ Validator for input validation (ready to use)
+✓ Domain errors (ErrMalformedParameters, etc.)
+✓ Value Objects with business logic
+✓ Type aliases for domain IDs
+✓ Table-driven tests (Go best practice)
+✓ Makefile commands (test, lint, sqlc, mocks)
+✓ Environment-based configuration (envconfig)
+
+No deviations from established patterns.
+
+================================================================================
+RISKS IDENTIFIED & MITIGATIONS
+================================================================================
+
+1. Migrations fail on Docker init
+   Mitigation: Test manually, validate syntax, add rollback scripts
+
+2. Connection pool exhaustion
+   Mitigation: Configure limits, monitor connections
+
+3. ENUMs out of sync (DB vs Go)
+   Mitigation: Create validation tests, document process
+
+4. Insufficient indexes
+   Mitigation: Monitor slow queries, use EXPLAIN ANALYZE
+
+5. Audit log growth
+   Mitigation: Future partitioning, cleanup policy
+
+6. Health check doesn't verify DB
+   Mitigation: Acceptable for MVP, add db.Ping() later
+
+7. Docker volume permissions
+   Mitigation: Document, use user mapping if needed
+
+================================================================================
+NO NEW DEPENDENCIES REQUIRED
+================================================================================
+
+All packages already in go.mod:
+✓ github.com/jackc/pgx/v5 (PostgreSQL)
+✓ github.com/go-chi/chi/v5 (HTTP router)
+✓ go.uber.org/fx (DI)
+✓ github.com/google/uuid (UUIDs)
+✓ github.com/kelseyhightower/envconfig (Config)
+
+No go get needed. ✅
+
+================================================================================
+NEXT PHASE: IMPLEMENTATION
+================================================================================
+
+The planning phase is complete. The implementation phase can now begin.
+
+Developer should:
+1. Review all artifacts in .thoughts/foundation-infrastructure/
+2. Start with tasks.md as the execution guide
+3. Follow the 6-phase implementation plan
+4. Run tests after each phase
+5. Complete final validation (T32) to mark feature DONE
+
+Estimated implementation time: 16-20 hours
+
+================================================================================
+ARTIFACTS LOCATION
+================================================================================
+
+All planning artifacts are in:
+  .thoughts/foundation-infrastructure/
+
+Files:
+  ✅ README.md              - Quick summary
+  ✅ plan.md                - Comprehensive plan
+  ✅ test-scenarios.feature - BDD scenarios
+  ✅ tasks.md               - Task backlog
+  ✅ PLANNING_COMPLETE.txt  - This file
+
+================================================================================
+PLANNING COMPLETE - READY FOR IMPLEMENTATION
+================================================================================
