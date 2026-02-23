@@ -165,7 +165,7 @@ CREATE TABLE exercises (
     reps VARCHAR(20) NOT NULL DEFAULT '',
     muscles JSONB NOT NULL DEFAULT '[]',
     rest_time INT NOT NULL DEFAULT 60 CHECK (rest_time >= 0),
-    weight DECIMAL(10,2) NOT NULL DEFAULT 0 CHECK (weight >= 0),
+    weight INT NOT NULL DEFAULT 0 CHECK (weight >= 0),
     order_index INT NOT NULL DEFAULT 0 CHECK (order_index >= 0),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -182,7 +182,7 @@ CREATE INDEX idx_exercises_muscles ON exercises USING GIN(muscles);
 - `reps` como VARCHAR (ex: `"8-12"` ou `"10"`) — representa faixas ou valores fixos
 - `thumbnail_url` com default `/assets/exercises/generic.png`
 - `rest_time` em segundos, default 60s
-- `weight` em kg, default 0 (bodyweight)
+- `weight` em **gramas** (INT), default 0 (bodyweight); use case converte de/para kg
 - `order_index` para ordenação dos exercícios no workout
 - Índice GIN em `muscles` para queries de filtro por músculo
 - Cascade delete: workout deletado = exercises deletados
@@ -520,7 +520,7 @@ type Exercise struct {
     Reps         string      // "8-12" ou "10"
     Muscles      []string    // JSONB, ex: ["chest", "triceps"]
     RestTime     int         // segundos, default 60
-    Weight       float64     // kg, 0 para bodyweight
+    Weight       int         // gramas, 0 para bodyweight; use case converte de/para kg
     OrderIndex   int
     CreatedAt    time.Time
     UpdatedAt    time.Time

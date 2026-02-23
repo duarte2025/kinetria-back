@@ -61,7 +61,7 @@ Feature: Foundation & Infrastructure
     When I query the exercises table schema
     Then it should have a foreign key to workouts(id) with ON DELETE CASCADE
     And muscles should be JSONB type (array of strings)
-    And it should have columns: sets (INT), reps (VARCHAR), rest_time (INT), weight (DECIMAL), order_index (INT)
+    And it should have columns: sets (INT), reps (VARCHAR), rest_time (INT), weight (INT, grams), order_index (INT)
     And it should have a GIN index on muscles
     And it should NOT have exercise_category or muscle_group ENUMs
 
@@ -188,7 +188,7 @@ Feature: Foundation & Infrastructure
     Given the domain entities package
     When I inspect the Exercise entity
     Then it should have a WorkoutID field
-    And it should have Muscles ([]string), Sets (int), Reps (string), RestTime (int), Weight (float64), OrderIndex (int)
+    And it should have Muscles ([]string), Sets (int), Reps (string), RestTime (int), Weight (int, grams), OrderIndex (int)
     And it should NOT have Category or PrimaryMuscleGroup fields
 
   Scenario: Session entity tracks workout progress with correct status values
