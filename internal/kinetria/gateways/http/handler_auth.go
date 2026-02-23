@@ -43,6 +43,7 @@ func NewAuthHandler(
 
 // Register handles POST /auth/register
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MB limit
 	var req struct {
 		Name     string `json:"name" validate:"required"`
 		Email    string `json:"email" validate:"required,email"`
@@ -82,6 +83,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 // Login handles POST /auth/login
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MB limit
 	var req struct {
 		Email    string `json:"email" validate:"required,email"`
 		Password string `json:"password" validate:"required"`
@@ -116,6 +118,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 // RefreshToken handles POST /auth/refresh
 func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MB limit
 	var req struct {
 		RefreshToken string `json:"refreshToken" validate:"required"`
 	}
@@ -152,6 +155,7 @@ func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 // Logout handles POST /auth/logout
 // Requires Authorization: Bearer <access_token> header with a valid JWT.
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MB limit
 	// Validate JWT from Authorization header
 	authHeader := r.Header.Get("Authorization")
 	if !strings.HasPrefix(authHeader, "Bearer ") {
