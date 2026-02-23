@@ -12,7 +12,7 @@ import (
 	"github.com/kinetria/kinetria-back/internal/kinetria/gateways/config"
 )
 
-func StartHTTPServer(lc fx.Lifecycle, cfg config.Config, router chi.Router, healthHandler http.HandlerFunc) {
+func StartHTTPServer(lc fx.Lifecycle, cfg config.Config, router *chi.Mux, healthHandler http.HandlerFunc) {
 	router.Get("/health", healthHandler)
 
 	server := &http.Server{

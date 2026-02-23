@@ -71,7 +71,7 @@ func main() {
 			httpgateway.NewServiceRouter,
 			chi.NewRouter,
 		),
-		fx.Invoke(func(router chi.Router, serviceRouter httpgateway.ServiceRouter) {
+		fx.Invoke(func(router *chi.Mux, serviceRouter httpgateway.ServiceRouter) {
 			router.Route(serviceRouter.Pattern(), serviceRouter.Router)
 		}),
 		fx.Invoke(httpgateway.StartHTTPServer),
