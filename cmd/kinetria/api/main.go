@@ -1,7 +1,13 @@
 package main
 
 import (
+	"github.com/go-chi/chi/v5"
 	"go.uber.org/fx"
+
+	"github.com/kinetria/kinetria-back/internal/kinetria/gateways/config"
+	httpgateway "github.com/kinetria/kinetria-back/internal/kinetria/gateways/http"
+	healthhandler "github.com/kinetria/kinetria-back/internal/kinetria/gateways/http/health"
+	"github.com/kinetria/kinetria-back/internal/kinetria/gateways/repositories"
 )
 
 var (
@@ -13,16 +19,12 @@ var (
 
 func main() {
 	fx.New(
-		// TODO: Adicionar módulos base quando disponíveis
-		// xfx.BaseModule(),
-		// xbuild.Module(AppName, BuildCommit, BuildTime, BuildTag),
-		// xlog.Module(),
-		// xtelemetry.Module(),
-		// xhttp.Module(),
-		// xhealth.Module(),
-
 		fx.Provide(
-		// TODO: Adicionar providers
+			config.ParseConfigFromEnv,
+			repositories.NewDatabasePool,
+			healthhandler.NewHealthHandler,
+			chi.NewRouter,
 		),
+		fx.Invoke(httpgateway.StartHTTPServer),
 	).Run()
 }
