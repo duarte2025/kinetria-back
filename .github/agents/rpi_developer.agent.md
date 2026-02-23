@@ -3,7 +3,6 @@ name: RPI Developer
 description: "Executor (task-by-task): implementa uma unica tarefa do backlog, com testes e docs quando aplicavel."
 tools: ['vscode', 'execute', 'read', 'edit', 'search', 'agent', 'todo']
 model: Claude Haiku 4.5 (copilot)
-target: vscode
 argument-hint: "Cole uma task (ex: T03) ou o bloco completo da seção da task do tasks.md; informe também o <feature|topic>."
 ---
 
