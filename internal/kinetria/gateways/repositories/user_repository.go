@@ -4,10 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/entities"
 	domainerrors "github.com/kinetria/kinetria-back/internal/kinetria/domain/errors"
 	"github.com/kinetria/kinetria-back/internal/kinetria/gateways/repositories/queries"
@@ -91,5 +91,6 @@ func rowToUser(id uuid.UUID, name, email, passwordHash string, profileImageUrl s
 
 // isUniqueViolation checks if the error is a PostgreSQL unique constraint violation (23505).
 func isUniqueViolation(err error) bool {
-	return strings.Contains(err.Error(), "23505") || strings.Contains(err.Error(), "unique")
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23505"
 }
