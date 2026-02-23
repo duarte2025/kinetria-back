@@ -1,7 +1,1 @@
--- Adicione suas queries SQLC aqui
--- Exemplo:
--- 
--- -- name: GetExampleByID :one
--- SELECT id, name, created_at, updated_at
--- FROM examples
--- WHERE id = @id;
+-- This file is deprecated. Queries are now organized in separate files (users.sql, refresh_tokens.sql, etc.)

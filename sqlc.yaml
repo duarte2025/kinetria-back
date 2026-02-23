@@ -1,7 +1,7 @@
 version: "2"
 sql:
   - engine: "postgresql"
-    queries: "internal/kinetria/gateways/repositories/queries/queries.sql"
+    queries: "internal/kinetria/gateways/repositories/queries/"
     schema: "migrations/"
     gen:
       go:
