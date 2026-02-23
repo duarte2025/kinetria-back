@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/kelseyhightower/envconfig"
 )
@@ -20,12 +21,20 @@ type Config struct {
 
 	// HTTP Server
 	HTTPPort int `envconfig:"HTTP_PORT" default:"8080"`
+
+	// JWT
+	JWTSecret          string        `envconfig:"JWT_SECRET" required:"true"`
+	JWTExpiry          time.Duration `envconfig:"JWT_EXPIRY" default:"1h"`
+	RefreshTokenExpiry time.Duration `envconfig:"REFRESH_TOKEN_EXPIRY" default:"720h"`
 }
 
 func ParseConfigFromEnv() (Config, error) {
 	var cfg Config
 	if err := envconfig.Process("", &cfg); err != nil {
 		return Config{}, fmt.Errorf("failed to parse config: %w", err)
+	}
+	if len(cfg.JWTSecret) < 32 {
+		return Config{}, fmt.Errorf("JWT_SECRET must be at least 32 characters, got %d", len(cfg.JWTSecret))
 	}
 	return cfg, nil
 }
