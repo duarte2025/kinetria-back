@@ -2,15 +2,22 @@ package auth_test
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
 	domainauth "github.com/kinetria/kinetria-back/internal/kinetria/domain/auth"
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/entities"
-	gatewayauth "github.com/kinetria/kinetria-back/internal/kinetria/gateways/auth"
 	"github.com/google/uuid"
 )
+
+// hashTokenLogout is a test helper for logout tests
+func hashTokenLogout(token string) string {
+	hash := sha256.Sum256([]byte(token))
+	return fmt.Sprintf("%x", hash)
+}
 
 func TestLogoutUC_Execute(t *testing.T) {
 	tests := []struct {
@@ -23,7 +30,7 @@ func TestLogoutUC_Execute(t *testing.T) {
 			name:       "success - revoke existing token",
 			plainToken: "valid-logout-token",
 			setupMock: func(r *mockRefreshTokenRepo) {
-				hash := gatewayauth.HashToken("valid-logout-token")
+				hash := hashTokenLogout("valid-logout-token")
 				r.tokens[hash] = &entities.RefreshToken{
 					ID:        uuid.New(),
 					Token:     hash,
@@ -38,7 +45,7 @@ func TestLogoutUC_Execute(t *testing.T) {
 			plainToken: "already-revoked-token",
 			setupMock: func(r *mockRefreshTokenRepo) {
 				now := time.Now()
-				hash := gatewayauth.HashToken("already-revoked-token")
+				hash := hashTokenLogout("already-revoked-token")
 				r.tokens[hash] = &entities.RefreshToken{
 					ID:        uuid.New(),
 					Token:     hash,
@@ -78,7 +85,7 @@ func TestLogoutUC_Execute(t *testing.T) {
 
 func TestLogoutUC_RevokesToken(t *testing.T) {
 	plainToken := "token-to-revoke"
-	hash := gatewayauth.HashToken(plainToken)
+	hash := hashTokenLogout(plainToken)
 	refreshTokenRepo := &mockRefreshTokenRepo{
 		tokens: map[string]*entities.RefreshToken{
 			hash: {

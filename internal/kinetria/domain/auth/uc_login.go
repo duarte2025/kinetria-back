@@ -11,7 +11,6 @@ import (
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/entities"
 	domainerrors "github.com/kinetria/kinetria-back/internal/kinetria/domain/errors"
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/ports"
-	gatewayauth "github.com/kinetria/kinetria-back/internal/kinetria/gateways/auth"
 )
 
 // LoginInput holds the credentials for authentication.
@@ -31,7 +30,8 @@ type LoginOutput struct {
 type LoginUC struct {
 	userRepo         ports.UserRepository
 	refreshTokenRepo ports.RefreshTokenRepository
-	jwtManager       *gatewayauth.JWTManager
+	tokenManager     ports.TokenManager
+	jwtExpiry        time.Duration
 	tokenExpiry      time.Duration
 }
 
@@ -39,13 +39,15 @@ type LoginUC struct {
 func NewLoginUC(
 	userRepo ports.UserRepository,
 	refreshTokenRepo ports.RefreshTokenRepository,
-	jwtManager *gatewayauth.JWTManager,
+	tokenManager ports.TokenManager,
+	jwtExpiry time.Duration,
 	tokenExpiry time.Duration,
 ) *LoginUC {
 	return &LoginUC{
 		userRepo:         userRepo,
 		refreshTokenRepo: refreshTokenRepo,
-		jwtManager:       jwtManager,
+		tokenManager:     tokenManager,
+		jwtExpiry:        jwtExpiry,
 		tokenExpiry:      tokenExpiry,
 	}
 }
@@ -65,7 +67,7 @@ func (uc *LoginUC) Execute(ctx context.Context, input LoginInput) (LoginOutput, 
 		return LoginOutput{}, domainerrors.ErrInvalidCredentials
 	}
 
-	refreshTokenPlain, err := gatewayauth.GenerateRefreshToken()
+	refreshTokenPlain, err := generateRefreshToken()
 	if err != nil {
 		return LoginOutput{}, err
 	}
@@ -74,7 +76,7 @@ func (uc *LoginUC) Execute(ctx context.Context, input LoginInput) (LoginOutput, 
 	refreshToken := &entities.RefreshToken{
 		ID:        uuid.New(),
 		UserID:    user.ID,
-		Token:     gatewayauth.HashToken(refreshTokenPlain),
+		Token:     hashToken(refreshTokenPlain),
 		ExpiresAt: now.Add(uc.tokenExpiry),
 		CreatedAt: now,
 	}
@@ -82,7 +84,7 @@ func (uc *LoginUC) Execute(ctx context.Context, input LoginInput) (LoginOutput, 
 		return LoginOutput{}, err
 	}
 
-	accessToken, err := uc.jwtManager.GenerateToken(user.ID)
+	accessToken, err := uc.tokenManager.GenerateToken(user.ID)
 	if err != nil {
 		return LoginOutput{}, err
 	}
@@ -90,6 +92,6 @@ func (uc *LoginUC) Execute(ctx context.Context, input LoginInput) (LoginOutput, 
 	return LoginOutput{
 		AccessToken:  accessToken,
 		RefreshToken: refreshTokenPlain,
-		ExpiresIn:    3600,
+		ExpiresIn:    int(uc.jwtExpiry.Seconds()),
 	}, nil
 }

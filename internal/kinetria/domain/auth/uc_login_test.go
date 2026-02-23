@@ -75,7 +75,7 @@ func TestLoginUC_Execute(t *testing.T) {
 				tt.setupMocks(userRepo)
 			}
 
-			uc := domainauth.NewLoginUC(userRepo, refreshTokenRepo, newJWTManager(), 720*time.Hour)
+			uc := domainauth.NewLoginUC(userRepo, refreshTokenRepo, &mockTokenManager{}, time.Hour, 720*time.Hour)
 			out, err := uc.Execute(context.Background(), tt.input)
 
 			if !errors.Is(err, tt.wantErr) {

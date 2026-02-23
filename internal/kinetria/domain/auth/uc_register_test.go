@@ -11,12 +11,7 @@ import (
 	domainauth "github.com/kinetria/kinetria-back/internal/kinetria/domain/auth"
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/entities"
 	domainerrors "github.com/kinetria/kinetria-back/internal/kinetria/domain/errors"
-	gatewayauth "github.com/kinetria/kinetria-back/internal/kinetria/gateways/auth"
 )
-
-func newJWTManager() *gatewayauth.JWTManager {
-	return gatewayauth.NewJWTManager("test-secret-key-that-is-at-least-32bytes", time.Hour)
-}
 
 func TestRegisterUC_Execute(t *testing.T) {
 	tests := []struct {
@@ -42,7 +37,7 @@ func TestRegisterUC_Execute(t *testing.T) {
 				if out.RefreshToken == "" {
 					t.Error("RefreshToken should not be empty")
 				}
-				if out.ExpiresIn != 3600 {
+				if out.ExpiresIn != 3600 { // 1 hour = 3600 seconds
 					t.Errorf("ExpiresIn = %d, want 3600", out.ExpiresIn)
 				}
 			},
@@ -103,13 +98,13 @@ func TestRegisterUC_Execute(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			userRepo := &mockUserRepo{users: make(map[string]*entities.User)}
 			refreshTokenRepo := &mockRefreshTokenRepo{tokens: make(map[string]*entities.RefreshToken)}
-			jwtMgr := newJWTManager()
+			tokenMgr := &mockTokenManager{}
 
 			if tt.setupMocks != nil {
 				tt.setupMocks(userRepo)
 			}
 
-			uc := domainauth.NewRegisterUC(userRepo, refreshTokenRepo, jwtMgr, 720*time.Hour)
+			uc := domainauth.NewRegisterUC(userRepo, refreshTokenRepo, tokenMgr, time.Hour, 720*time.Hour)
 			out, err := uc.Execute(context.Background(), tt.input)
 
 			if !errors.Is(err, tt.wantErr) {
@@ -126,7 +121,8 @@ func TestRegisterUC_Execute(t *testing.T) {
 func TestRegisterUC_PasswordIsHashed(t *testing.T) {
 	userRepo := &mockUserRepo{users: make(map[string]*entities.User)}
 	refreshTokenRepo := &mockRefreshTokenRepo{tokens: make(map[string]*entities.RefreshToken)}
-	uc := domainauth.NewRegisterUC(userRepo, refreshTokenRepo, newJWTManager(), 720*time.Hour)
+	tokenMgr := &mockTokenManager{}
+	uc := domainauth.NewRegisterUC(userRepo, refreshTokenRepo, tokenMgr, time.Hour, 720*time.Hour)
 
 	_, err := uc.Execute(context.Background(), domainauth.RegisterInput{
 		Name:     "Test User",

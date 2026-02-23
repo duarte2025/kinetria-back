@@ -84,3 +84,24 @@ func (m *mockRefreshTokenRepo) RevokeByToken(ctx context.Context, tokenHash stri
 func (m *mockRefreshTokenRepo) RevokeAllByUserID(ctx context.Context, userID uuid.UUID) error {
 	return nil
 }
+
+// mockTokenManager is a mock implementation of ports.TokenManager for testing.
+type mockTokenManager struct {
+	token    string
+	parseErr error
+}
+
+func (m *mockTokenManager) GenerateToken(userID uuid.UUID) (string, error) {
+	if m.token != "" {
+		return m.token, nil
+	}
+	return "mock-jwt-token", nil
+}
+
+func (m *mockTokenManager) ParseToken(tokenString string) (uuid.UUID, error) {
+	if m.parseErr != nil {
+		return uuid.Nil, m.parseErr
+	}
+	return uuid.New(), nil
+}
+

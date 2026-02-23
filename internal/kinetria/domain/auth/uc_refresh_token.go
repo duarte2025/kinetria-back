@@ -9,7 +9,6 @@ import (
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/entities"
 	domainerrors "github.com/kinetria/kinetria-back/internal/kinetria/domain/errors"
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/ports"
-	gatewayauth "github.com/kinetria/kinetria-back/internal/kinetria/gateways/auth"
 )
 
 // RefreshTokenInput holds the refresh token for renewal.
@@ -27,19 +26,22 @@ type RefreshTokenOutput struct {
 // RefreshTokenUC implements the use case for renewing an access token.
 type RefreshTokenUC struct {
 	refreshTokenRepo ports.RefreshTokenRepository
-	jwtManager       *gatewayauth.JWTManager
+	tokenManager     ports.TokenManager
+	jwtExpiry        time.Duration
 	tokenExpiry      time.Duration
 }
 
 // NewRefreshTokenUC creates a new RefreshTokenUC with all required dependencies.
 func NewRefreshTokenUC(
 	refreshTokenRepo ports.RefreshTokenRepository,
-	jwtManager *gatewayauth.JWTManager,
+	tokenManager ports.TokenManager,
+	jwtExpiry time.Duration,
 	tokenExpiry time.Duration,
 ) *RefreshTokenUC {
 	return &RefreshTokenUC{
 		refreshTokenRepo: refreshTokenRepo,
-		jwtManager:       jwtManager,
+		tokenManager:     tokenManager,
+		jwtExpiry:        jwtExpiry,
 		tokenExpiry:      tokenExpiry,
 	}
 }
@@ -49,7 +51,7 @@ func NewRefreshTokenUC(
 // Returns ErrTokenRevoked if the token has been revoked.
 // Returns ErrTokenExpired if the token has expired.
 func (uc *RefreshTokenUC) Execute(ctx context.Context, input RefreshTokenInput) (RefreshTokenOutput, error) {
-	tokenHash := gatewayauth.HashToken(input.RefreshToken)
+	tokenHash := hashToken(input.RefreshToken)
 
 	storedToken, err := uc.refreshTokenRepo.GetByToken(ctx, tokenHash)
 	if err != nil {
@@ -68,7 +70,7 @@ func (uc *RefreshTokenUC) Execute(ctx context.Context, input RefreshTokenInput) 
 		return RefreshTokenOutput{}, err
 	}
 
-	newRefreshTokenPlain, err := gatewayauth.GenerateRefreshToken()
+	newRefreshTokenPlain, err := generateRefreshToken()
 	if err != nil {
 		return RefreshTokenOutput{}, err
 	}
@@ -77,7 +79,7 @@ func (uc *RefreshTokenUC) Execute(ctx context.Context, input RefreshTokenInput) 
 	newRefreshToken := &entities.RefreshToken{
 		ID:        uuid.New(),
 		UserID:    storedToken.UserID,
-		Token:     gatewayauth.HashToken(newRefreshTokenPlain),
+		Token:     hashToken(newRefreshTokenPlain),
 		ExpiresAt: now.Add(uc.tokenExpiry),
 		CreatedAt: now,
 	}
@@ -85,7 +87,7 @@ func (uc *RefreshTokenUC) Execute(ctx context.Context, input RefreshTokenInput) 
 		return RefreshTokenOutput{}, err
 	}
 
-	accessToken, err := uc.jwtManager.GenerateToken(storedToken.UserID)
+	accessToken, err := uc.tokenManager.GenerateToken(storedToken.UserID)
 	if err != nil {
 		return RefreshTokenOutput{}, err
 	}
@@ -93,6 +95,6 @@ func (uc *RefreshTokenUC) Execute(ctx context.Context, input RefreshTokenInput) 
 	return RefreshTokenOutput{
 		AccessToken:  accessToken,
 		RefreshToken: newRefreshTokenPlain,
-		ExpiresIn:    3600,
+		ExpiresIn:    int(uc.jwtExpiry.Seconds()),
 	}, nil
 }

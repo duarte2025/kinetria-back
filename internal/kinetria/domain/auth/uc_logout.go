@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/ports"
-	gatewayauth "github.com/kinetria/kinetria-back/internal/kinetria/gateways/auth"
 )
 
 // LogoutInput holds the refresh token to revoke on logout.
@@ -28,7 +27,7 @@ func NewLogoutUC(refreshTokenRepo ports.RefreshTokenRepository) *LogoutUC {
 // Execute revokes the given refresh token.
 // This operation is idempotent - it succeeds even if the token is already revoked or does not exist.
 func (uc *LogoutUC) Execute(ctx context.Context, input LogoutInput) (LogoutOutput, error) {
-	tokenHash := gatewayauth.HashToken(input.RefreshToken)
+	tokenHash := hashToken(input.RefreshToken)
 	if err := uc.refreshTokenRepo.RevokeByToken(ctx, tokenHash); err != nil {
 		return LogoutOutput{}, err
 	}

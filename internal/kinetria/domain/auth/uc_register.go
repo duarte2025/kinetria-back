@@ -11,7 +11,6 @@ import (
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/entities"
 	domainerrors "github.com/kinetria/kinetria-back/internal/kinetria/domain/errors"
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/ports"
-	gatewayauth "github.com/kinetria/kinetria-back/internal/kinetria/gateways/auth"
 )
 
 // RegisterInput holds the input data for user registration.
@@ -32,7 +31,8 @@ type RegisterOutput struct {
 type RegisterUC struct {
 	userRepo         ports.UserRepository
 	refreshTokenRepo ports.RefreshTokenRepository
-	jwtManager       *gatewayauth.JWTManager
+	tokenManager     ports.TokenManager
+	jwtExpiry        time.Duration
 	tokenExpiry      time.Duration
 }
 
@@ -40,13 +40,15 @@ type RegisterUC struct {
 func NewRegisterUC(
 	userRepo ports.UserRepository,
 	refreshTokenRepo ports.RefreshTokenRepository,
-	jwtManager *gatewayauth.JWTManager,
+	tokenManager ports.TokenManager,
+	jwtExpiry time.Duration,
 	tokenExpiry time.Duration,
 ) *RegisterUC {
 	return &RegisterUC{
 		userRepo:         userRepo,
 		refreshTokenRepo: refreshTokenRepo,
-		jwtManager:       jwtManager,
+		tokenManager:     tokenManager,
+		jwtExpiry:        jwtExpiry,
 		tokenExpiry:      tokenExpiry,
 	}
 }
@@ -86,16 +88,15 @@ func (uc *RegisterUC) Execute(ctx context.Context, input RegisterInput) (Registe
 		return RegisterOutput{}, err
 	}
 
-	refreshTokenPlain, err := gatewayauth.GenerateRefreshToken()
+	refreshTokenPlain, err := generateRefreshToken()
 	if err != nil {
 		return RegisterOutput{}, err
 	}
-	refreshTokenHash := gatewayauth.HashToken(refreshTokenPlain)
 
 	refreshToken := &entities.RefreshToken{
 		ID:        uuid.New(),
 		UserID:    user.ID,
-		Token:     refreshTokenHash,
+		Token:     hashToken(refreshTokenPlain),
 		ExpiresAt: now.Add(uc.tokenExpiry),
 		CreatedAt: now,
 	}
@@ -103,7 +104,7 @@ func (uc *RegisterUC) Execute(ctx context.Context, input RegisterInput) (Registe
 		return RegisterOutput{}, err
 	}
 
-	accessToken, err := uc.jwtManager.GenerateToken(user.ID)
+	accessToken, err := uc.tokenManager.GenerateToken(user.ID)
 	if err != nil {
 		return RegisterOutput{}, err
 	}
@@ -111,6 +112,6 @@ func (uc *RegisterUC) Execute(ctx context.Context, input RegisterInput) (Registe
 	return RegisterOutput{
 		AccessToken:  accessToken,
 		RefreshToken: refreshTokenPlain,
-		ExpiresIn:    3600,
+		ExpiresIn:    int(uc.jwtExpiry.Seconds()),
 	}, nil
 }

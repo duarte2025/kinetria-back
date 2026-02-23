@@ -30,10 +30,17 @@ func main() {
 			repositories.NewDatabasePool,
 			repositories.NewSQLDB,
 
-			// JWT
+			// JWT - Provide JWTManager as both concrete type and interface
 			func(cfg config.Config) *gatewayauth.JWTManager {
 				return gatewayauth.NewJWTManager(cfg.JWTSecret, cfg.JWTExpiry)
 			},
+			// Bind JWTManager to TokenManager interface for use cases
+			fx.Annotate(
+				func(jwtMgr *gatewayauth.JWTManager) ports.TokenManager {
+					return jwtMgr
+				},
+				fx.As(new(ports.TokenManager)),
+			),
 
 			// Repositories (with interface binding)
 			fx.Annotate(
@@ -46,14 +53,14 @@ func main() {
 			),
 
 			// Use cases
-			func(userRepo ports.UserRepository, refreshTokenRepo ports.RefreshTokenRepository, jwtMgr *gatewayauth.JWTManager, cfg config.Config) *domainauth.RegisterUC {
-				return domainauth.NewRegisterUC(userRepo, refreshTokenRepo, jwtMgr, cfg.RefreshTokenExpiry)
+			func(userRepo ports.UserRepository, refreshTokenRepo ports.RefreshTokenRepository, tokenMgr ports.TokenManager, cfg config.Config) *domainauth.RegisterUC {
+				return domainauth.NewRegisterUC(userRepo, refreshTokenRepo, tokenMgr, cfg.JWTExpiry, cfg.RefreshTokenExpiry)
 			},
-			func(userRepo ports.UserRepository, refreshTokenRepo ports.RefreshTokenRepository, jwtMgr *gatewayauth.JWTManager, cfg config.Config) *domainauth.LoginUC {
-				return domainauth.NewLoginUC(userRepo, refreshTokenRepo, jwtMgr, cfg.RefreshTokenExpiry)
+			func(userRepo ports.UserRepository, refreshTokenRepo ports.RefreshTokenRepository, tokenMgr ports.TokenManager, cfg config.Config) *domainauth.LoginUC {
+				return domainauth.NewLoginUC(userRepo, refreshTokenRepo, tokenMgr, cfg.JWTExpiry, cfg.RefreshTokenExpiry)
 			},
-			func(refreshTokenRepo ports.RefreshTokenRepository, jwtMgr *gatewayauth.JWTManager, cfg config.Config) *domainauth.RefreshTokenUC {
-				return domainauth.NewRefreshTokenUC(refreshTokenRepo, jwtMgr, cfg.RefreshTokenExpiry)
+			func(refreshTokenRepo ports.RefreshTokenRepository, tokenMgr ports.TokenManager, cfg config.Config) *domainauth.RefreshTokenUC {
+				return domainauth.NewRefreshTokenUC(refreshTokenRepo, tokenMgr, cfg.JWTExpiry, cfg.RefreshTokenExpiry)
 			},
 			domainauth.NewLogoutUC,
 

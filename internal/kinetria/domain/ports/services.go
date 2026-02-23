@@ -1,9 +1,10 @@
 package ports
 
-// Adicione suas interfaces de serviços externos aqui
-// Exemplo:
-// //go:generate moq -stub -pkg mocks -out mocks/services.go . ExternalService
-//
-// type ExternalService interface {
-//     GetData(ctx context.Context, input string) (string, error)
-// }
+import "github.com/google/uuid"
+
+// TokenManager handles JWT token generation and validation.
+// This interface allows the domain layer to use token operations without depending on gateway implementations.
+type TokenManager interface {
+	GenerateToken(userID uuid.UUID) (string, error)
+	ParseToken(tokenString string) (uuid.UUID, error)
+}

@@ -2,7 +2,9 @@ package auth_test
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -10,11 +12,16 @@ import (
 	domainauth "github.com/kinetria/kinetria-back/internal/kinetria/domain/auth"
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/entities"
 	domainerrors "github.com/kinetria/kinetria-back/internal/kinetria/domain/errors"
-	gatewayauth "github.com/kinetria/kinetria-back/internal/kinetria/gateways/auth"
 )
 
+// hashToken is a test helper that mirrors the domain's private hashToken function
+func hashToken(token string) string {
+	hash := sha256.Sum256([]byte(token))
+	return fmt.Sprintf("%x", hash)
+}
+
 func makeRefreshToken(plainToken string, userID uuid.UUID, expiresAt time.Time, revokedAt *time.Time) (*entities.RefreshToken, string) {
-	hash := gatewayauth.HashToken(plainToken)
+	hash := hashToken(plainToken)
 	return &entities.RefreshToken{
 		ID:        uuid.New(),
 		UserID:    userID,
@@ -85,10 +92,10 @@ func TestRefreshTokenUC_Execute(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			refreshTokenRepo := &mockRefreshTokenRepo{tokens: make(map[string]*entities.RefreshToken)}
-			hash := gatewayauth.HashToken(tt.plainToken)
+			hash := hashToken(tt.plainToken)
 			tt.setupMock(refreshTokenRepo, hash)
 
-			uc := domainauth.NewRefreshTokenUC(refreshTokenRepo, newJWTManager(), 720*time.Hour)
+			uc := domainauth.NewRefreshTokenUC(refreshTokenRepo, &mockTokenManager{}, time.Hour, 720*time.Hour)
 			out, err := uc.Execute(context.Background(), domainauth.RefreshTokenInput{
 				RefreshToken: tt.plainToken,
 			})
@@ -112,7 +119,7 @@ func TestRefreshTokenUC_TokenRotation(t *testing.T) {
 	tok, _ := makeRefreshToken(plainToken, userID, time.Now().Add(24*time.Hour), nil)
 	refreshTokenRepo.tokens[tok.Token] = tok
 
-	uc := domainauth.NewRefreshTokenUC(refreshTokenRepo, newJWTManager(), 720*time.Hour)
+	uc := domainauth.NewRefreshTokenUC(refreshTokenRepo, &mockTokenManager{}, time.Hour, 720*time.Hour)
 
 	out, err := uc.Execute(context.Background(), domainauth.RefreshTokenInput{
 		RefreshToken: plainToken,
@@ -122,7 +129,7 @@ func TestRefreshTokenUC_TokenRotation(t *testing.T) {
 	}
 
 	// Old token should be revoked
-	oldHash := gatewayauth.HashToken(plainToken)
+	oldHash := hashToken(plainToken)
 	oldToken := refreshTokenRepo.tokens[oldHash]
 	if oldToken == nil || oldToken.RevokedAt == nil {
 		t.Error("old token should be revoked after rotation")
