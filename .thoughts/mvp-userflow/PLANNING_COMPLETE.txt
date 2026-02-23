@@ -1,0 +1,23 @@
+✅ PLANNING COMPLETE
+
+Feature: Start Workout Session (POST /api/v1/sessions)
+Date: 2026-02-23
+Phase: Plan (RPI workflow)
+
+Artifacts created:
+✅ plan.md — Implementation plan (AS-IS, TO-BE, contracts, decisions, risks)
+✅ test-scenarios.feature — BDD scenarios (Gherkin format)
+✅ tasks.md — Backlog of 13 executable tasks with acceptance criteria
+✅ README.md — Navigation guide and implementation instructions
+
+Next Phase: Implement (RPI workflow)
+- Execute tasks.md sequentially (T01 → T13)
+- Run tests for each task
+- Validate acceptance criteria
+- Document evidence
+
+Dependencies:
+⚠️  foundation-infrastructure must be implemented FIRST
+    (migrations, JWT auth, entities, database pool)
+
+Estimated effort: 3-5 days (1 experienced developer)
