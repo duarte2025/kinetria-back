@@ -1,0 +1,773 @@
+openapi: 3.0.3
+info:
+  title: Kinetria BFF API
+  description: |
+    Backend For Frontend (BFF) REST API for the Kinetria mobile app.
+    Built with Go. All protected routes require a valid JWT Bearer token.
+  version: 1.0.0
+  contact:
+    name: Kinetria Team
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local development
+  - url: https://api.kinetria.app/api/v1
+    description: Production
+
+tags:
+  - name: auth
+    description: Authentication and token management
+  - name: home
+    description: Home screen aggregated data
+  - name: workouts
+    description: Workout plans and exercises
+  - name: sessions
+    description: Active workout session tracking
+
+# ─────────────────────────────────────────────────────────────
+# Security
+# ─────────────────────────────────────────────────────────────
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  # ─────────────────────────────────────────────────────────────
+  # Reusable Schemas
+  # ─────────────────────────────────────────────────────────────
+  schemas:
+
+    # ── Generic wrappers ──────────────────────────────────────
+    ApiResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          description: Response payload (type varies per endpoint)
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    ApiError:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          example: WORKOUT_NOT_FOUND
+        message:
+          type: string
+          example: "Workout with id '42' was not found."
+        details:
+          type: object
+          additionalProperties: true
+
+    PaginationMeta:
+      type: object
+      required: [page, pageSize, total, totalPages]
+      properties:
+        page:
+          type: integer
+          example: 1
+        pageSize:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 57
+        totalPages:
+          type: integer
+          example: 3
+
+    # ── Auth ──────────────────────────────────────────────────
+    AuthTokens:
+      type: object
+      required: [accessToken, refreshToken, expiresIn]
+      properties:
+        accessToken:
+          type: string
+          description: Short-lived JWT used in every protected request
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        refreshToken:
+          type: string
+          description: Long-lived opaque token used to obtain a new access token
+          example: dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4...
+        expiresIn:
+          type: integer
+          description: Seconds until the access token expires
+          example: 3600
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: "s3cr3tP@ssw0rd"
+
+    RegisterRequest:
+      type: object
+      required: [name, email, password]
+      properties:
+        name:
+          type: string
+          example: Bruno Costa
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: "s3cr3tP@ssw0rd"
+
+    RefreshRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+          example: dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4...
+
+    # ── User ──────────────────────────────────────────────────
+    User:
+      type: object
+      required: [id, name, email]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        name:
+          type: string
+          example: Bruno Costa
+        email:
+          type: string
+          format: email
+        profileImageUrl:
+          type: string
+          format: uri
+          nullable: true
+          example: "https://cdn.kinetria.app/avatars/a1b2c3d4.jpg"
+
+    # ── Home ─────────────────────────────────────────────────
+    HomeData:
+      type: object
+      required: [user, todayWorkout, weekProgress, stats]
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        todayWorkout:
+          $ref: '#/components/schemas/WorkoutSummary'
+          nullable: true
+          description: Null when no workout is scheduled for today
+        weekProgress:
+          type: array
+          items:
+            $ref: '#/components/schemas/DayProgress'
+          minItems: 7
+          maxItems: 7
+        stats:
+          $ref: '#/components/schemas/UserStats'
+
+    DayProgress:
+      type: object
+      required: [day, date, status]
+      properties:
+        day:
+          type: string
+          description: Abbreviated day label in pt-BR (S, T, Q, S, D)
+          example: "S"
+        date:
+          type: string
+          format: date
+          example: "2026-02-17"
+        status:
+          type: string
+          enum: [completed, missed, future]
+
+    UserStats:
+      type: object
+      required: [calories, totalTimeMinutes]
+      properties:
+        calories:
+          type: integer
+          description: Total calories burned this week
+          example: 320
+        totalTimeMinutes:
+          type: integer
+          description: Total workout time this week in minutes
+          example: 750
+
+    # ── Workout ───────────────────────────────────────────────
+    WorkoutSummary:
+      type: object
+      required: [id, name, duration]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "b2c3d4e5-f6a7-8901-bcde-f12345678901"
+        name:
+          type: string
+          example: "Treino de Peito e Tríceps"
+        description:
+          type: string
+          nullable: true
+          example: "Foco em hipertrofia com exercícios compostos"
+        type:
+          type: string
+          nullable: true
+          example: "FORÇA"
+        intensity:
+          type: string
+          nullable: true
+          example: "Alta"
+        duration:
+          type: integer
+          description: Estimated duration in minutes
+          example: 45
+        imageUrl:
+          type: string
+          format: uri
+          nullable: true
+          example: "https://cdn.kinetria.app/workouts/chest.jpg"
+
+    Workout:
+      allOf:
+        - $ref: '#/components/schemas/WorkoutSummary'
+        - type: object
+          required: [exercises]
+          properties:
+            exercises:
+              type: array
+              items:
+                $ref: '#/components/schemas/Exercise'
+
+    Exercise:
+      type: object
+      required: [id, name, sets, reps]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "c3d4e5f6-a7b8-9012-cdef-123456789012"
+        name:
+          type: string
+          example: "Supino Reto"
+        thumbnailUrl:
+          type: string
+          format: uri
+          nullable: true
+          example: "https://cdn.kinetria.app/exercises/bench-press.jpg"
+        sets:
+          type: integer
+          minimum: 1
+          example: 4
+        reps:
+          type: string
+          description: Can be an exact number or a range (e.g. "8-12")
+          example: "8-12"
+        muscles:
+          type: array
+          items:
+            type: string
+          example: ["Peito", "Tríceps", "Ombro"]
+        restTime:
+          type: integer
+          description: Rest time in seconds between sets
+          example: 90
+        weight:
+          type: number
+          format: float
+          description: Suggested starting weight in kg
+          nullable: true
+          example: 80.0
+
+    # ── Session ───────────────────────────────────────────────
+    StartSessionRequest:
+      type: object
+      required: [workoutId]
+      properties:
+        workoutId:
+          type: string
+          format: uuid
+          example: "b2c3d4e5-f6a7-8901-bcde-f12345678901"
+
+    Session:
+      type: object
+      required: [id, workoutId, userId, startedAt, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "d4e5f6a7-b8c9-0123-defa-234567890123"
+        workoutId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        startedAt:
+          type: string
+          format: date-time
+          example: "2026-02-23T14:00:00Z"
+        finishedAt:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+          enum: [active, completed, abandoned]
+
+    RecordSetRequest:
+      type: object
+      required: [exerciseId, setNumber, weight, reps, status]
+      properties:
+        exerciseId:
+          type: string
+          format: uuid
+          example: "c3d4e5f6-a7b8-9012-cdef-123456789012"
+        setNumber:
+          type: integer
+          minimum: 1
+          example: 2
+        weight:
+          type: number
+          format: float
+          description: Weight used in kg
+          example: 82.5
+        reps:
+          type: integer
+          minimum: 0
+          example: 10
+        status:
+          type: string
+          enum: [completed, skipped]
+
+    SetRecord:
+      allOf:
+        - $ref: '#/components/schemas/RecordSetRequest'
+        - type: object
+          required: [id, sessionId, recordedAt]
+          properties:
+            id:
+              type: string
+              format: uuid
+            sessionId:
+              type: string
+              format: uuid
+            recordedAt:
+              type: string
+              format: date-time
+              example: "2026-02-23T14:05:30Z"
+
+    FinishSessionRequest:
+      type: object
+      properties:
+        notes:
+          type: string
+          nullable: true
+          example: "Ótimo treino, senti o peitoral muito bem."
+
+  # ── Reusable Responses ────────────────────────────────────
+  responses:
+    Unauthorized:
+      description: Missing or invalid JWT token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            code: UNAUTHORIZED
+            message: "Invalid or expired access token."
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            code: NOT_FOUND
+            message: "The requested resource was not found."
+
+    UnprocessableEntity:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            code: VALIDATION_ERROR
+            message: "Request body is invalid."
+
+# ─────────────────────────────────────────────────────────────
+# Endpoints
+# ─────────────────────────────────────────────────────────────
+paths:
+
+  # ── Auth ──────────────────────────────────────────────────
+  /auth/register:
+    post:
+      tags: [auth]
+      summary: Register a new user
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User created, tokens returned
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AuthTokens'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '409':
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: EMAIL_ALREADY_EXISTS
+                message: "An account with this email already exists."
+
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: Authenticate and obtain tokens
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AuthTokens'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: INVALID_CREDENTIALS
+                message: "Email or password is incorrect."
+
+  /auth/refresh:
+    post:
+      tags: [auth]
+      summary: Refresh the access token
+      operationId: refreshToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: New tokens returned
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AuthTokens'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    post:
+      tags: [auth]
+      summary: Invalidate the refresh token (server-side revocation)
+      operationId: logoutUser
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '204':
+          description: Logged out successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ── Home ─────────────────────────────────────────────────
+  /home:
+    get:
+      tags: [home]
+      summary: Aggregated home screen data
+      description: |
+        Returns user profile, today's scheduled workout, weekly progress (last 7 days),
+        and weekly stats in a single request — optimised for the home screen.
+      operationId: getHomeData
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Home data
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/HomeData'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ── Workouts ──────────────────────────────────────────────
+  /workouts:
+    get:
+      tags: [workouts]
+      summary: List all workouts for the authenticated user
+      operationId: listWorkouts
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        '200':
+          description: Paginated workout list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/WorkoutSummary'
+                      meta:
+                        $ref: '#/components/schemas/PaginationMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /workouts/{workoutId}:
+    get:
+      tags: [workouts]
+      summary: Get a single workout with its exercises
+      operationId: getWorkout
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: workoutId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Workout detail with exercises
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Workout'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ── Sessions ──────────────────────────────────────────────
+  /sessions:
+    post:
+      tags: [sessions]
+      summary: Start a new workout session
+      operationId: startSession
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartSessionRequest'
+      responses:
+        '201':
+          description: Session created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Session'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /sessions/{sessionId}/sets:
+    post:
+      tags: [sessions]
+      summary: Record a completed or skipped set within an active session
+      operationId: recordSet
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordSetRequest'
+      responses:
+        '201':
+          description: Set recorded
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SetRecord'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /sessions/{sessionId}/finish:
+    patch:
+      tags: [sessions]
+      summary: Mark an active session as completed
+      operationId: finishSession
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FinishSessionRequest'
+      responses:
+        '200':
+          description: Session finished
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Session'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Session is already finished or abandoned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: SESSION_ALREADY_CLOSED
+                message: "This session is already completed."
+
+  /sessions/{sessionId}/abandon:
+    patch:
+      tags: [sessions]
+      summary: Abandon an active session without saving progress
+      operationId: abandonSession
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Session abandoned
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Session'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
