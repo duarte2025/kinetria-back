@@ -5,19 +5,20 @@ import (
 )
 
 type ServiceRouter struct {
-	handler Handler
+	// handler Handler
 }
 
-func NewServiceRouter(handler Handler) ServiceRouter {
+func NewServiceRouter( /* handler Handler */ ) ServiceRouter {
 	return ServiceRouter{
-		handler: handler,
+		// handler: handler,
 	}
 }
 
 func (s ServiceRouter) Pattern() string {
-	return "/"
+	return "/api/v1"
 }
 
 func (s ServiceRouter) Router(router chi.Router) {
-	router.Get("/health", s.handler.Health)
+	// Adicione suas rotas aqui
+	// router.Post("/example", rest.Handle(s.handler.Create))
 }
