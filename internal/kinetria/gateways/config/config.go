@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/kelseyhightower/envconfig"
 )
@@ -20,6 +21,11 @@ type Config struct {
 
 	// HTTP Server
 	HTTPPort int `envconfig:"HTTP_PORT" default:"8080"`
+
+	// JWT
+	JWTSecret          string        `envconfig:"JWT_SECRET" required:"true"`
+	JWTExpiry          time.Duration `envconfig:"JWT_EXPIRY" default:"1h"`
+	RefreshTokenExpiry time.Duration `envconfig:"REFRESH_TOKEN_EXPIRY" default:"720h"`
 }
 
 func ParseConfigFromEnv() (Config, error) {
