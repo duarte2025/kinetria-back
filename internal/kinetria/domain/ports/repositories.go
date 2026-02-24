@@ -29,11 +29,6 @@ type SessionRepository interface {
 	FindActiveByUserID(ctx context.Context, userID uuid.UUID) (*entities.Session, error)
 }
 
-// WorkoutRepository defines persistence operations for workouts.
-type WorkoutRepository interface {
-	ExistsByIDAndUserID(ctx context.Context, workoutID, userID uuid.UUID) (bool, error)
-}
-
 // AuditLogRepository defines persistence for audit log entries (append-only).
 type AuditLogRepository interface {
 	Append(ctx context.Context, entry *entities.AuditLog) error

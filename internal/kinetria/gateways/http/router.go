@@ -9,6 +9,7 @@ import (
 type ServiceRouter struct {
 	authHandler     *AuthHandler
 	sessionsHandler *SessionsHandler
+	workoutsHandler *WorkoutsHandler
 	jwtManager      *gatewayauth.JWTManager
 }
 
@@ -16,11 +17,13 @@ type ServiceRouter struct {
 func NewServiceRouter(
 	authHandler *AuthHandler,
 	sessionsHandler *SessionsHandler,
+	workoutsHandler *WorkoutsHandler,
 	jwtManager *gatewayauth.JWTManager,
 ) ServiceRouter {
 	return ServiceRouter{
 		authHandler:     authHandler,
 		sessionsHandler: sessionsHandler,
+		workoutsHandler: workoutsHandler,
 		jwtManager:      jwtManager,
 	}
 }
@@ -41,4 +44,7 @@ func (s ServiceRouter) Router(router chi.Router) {
 
 	// Protected routes
 	router.With(AuthMiddleware(s.jwtManager)).Post("/sessions", s.sessionsHandler.StartSession)
+
+	// Workouts (authenticated)
+	router.Get("/workouts", s.workoutsHandler.ListWorkouts)
 }

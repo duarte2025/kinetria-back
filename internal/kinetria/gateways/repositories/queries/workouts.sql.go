@@ -28,3 +28,64 @@ func (q *Queries) ExistsWorkoutByIDAndUserID(ctx context.Context, arg ExistsWork
 	err := row.Scan(&exists)
 	return exists, err
 }
+
+const listWorkoutsByUserID = `-- name: ListWorkoutsByUserID :many
+SELECT id, user_id, name, description, type, intensity, duration, image_url, created_at, updated_at
+FROM workouts
+WHERE user_id = $1
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type ListWorkoutsByUserIDParams struct {
+	UserID uuid.UUID `json:"user_id"`
+	Limit  int32     `json:"limit"`
+	Offset int32     `json:"offset"`
+}
+
+func (q *Queries) ListWorkoutsByUserID(ctx context.Context, arg ListWorkoutsByUserIDParams) ([]Workout, error) {
+	rows, err := q.db.QueryContext(ctx, listWorkoutsByUserID, arg.UserID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Workout
+	for rows.Next() {
+		var i Workout
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Name,
+			&i.Description,
+			&i.Type,
+			&i.Intensity,
+			&i.Duration,
+			&i.ImageUrl,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const countWorkoutsByUserID = `-- name: CountWorkoutsByUserID :one
+SELECT COUNT(*)
+FROM workouts
+WHERE user_id = $1
+`
+
+func (q *Queries) CountWorkoutsByUserID(ctx context.Context, userID uuid.UUID) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countWorkoutsByUserID, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}

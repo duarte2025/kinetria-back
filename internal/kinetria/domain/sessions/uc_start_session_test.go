@@ -47,6 +47,10 @@ func (m *mockWorkoutRepository) ExistsByIDAndUserID(ctx context.Context, workout
 	return m.existsResponse, nil
 }
 
+func (m *mockWorkoutRepository) ListByUserID(_ context.Context, _ uuid.UUID, _, _ int) ([]entities.Workout, int, error) {
+	return nil, 0, nil
+}
+
 // mockAuditLogRepository is a mock implementation of ports.AuditLogRepository for testing.
 type mockAuditLogRepository struct {
 	appendErr    error

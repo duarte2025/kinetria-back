@@ -8,6 +8,7 @@ import (
 	domainauth "github.com/kinetria/kinetria-back/internal/kinetria/domain/auth"
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/ports"
 	domainsessions "github.com/kinetria/kinetria-back/internal/kinetria/domain/sessions"
+	domainworkouts "github.com/kinetria/kinetria-back/internal/kinetria/domain/workouts"
 	gatewayauth "github.com/kinetria/kinetria-back/internal/kinetria/gateways/auth"
 	"github.com/kinetria/kinetria-back/internal/kinetria/gateways/config"
 	httpgateway "github.com/kinetria/kinetria-back/internal/kinetria/gateways/http"
@@ -77,12 +78,14 @@ func main() {
 			},
 			domainauth.NewLogoutUC,
 			domainsessions.NewStartSessionUC,
+			domainworkouts.NewListWorkoutsUC,
 
 			// Validator and HTTP
 			validator.New,
 			healthhandler.NewHealthHandler,
 			httpgateway.NewAuthHandler,
 			httpgateway.NewSessionsHandler,
+			httpgateway.NewWorkoutsHandler,
 			httpgateway.NewServiceRouter,
 			chi.NewRouter,
 		),
