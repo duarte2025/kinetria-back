@@ -7,6 +7,7 @@ import (
 
 	domainauth "github.com/kinetria/kinetria-back/internal/kinetria/domain/auth"
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/ports"
+	domainsessions "github.com/kinetria/kinetria-back/internal/kinetria/domain/sessions"
 	gatewayauth "github.com/kinetria/kinetria-back/internal/kinetria/gateways/auth"
 	"github.com/kinetria/kinetria-back/internal/kinetria/gateways/config"
 	httpgateway "github.com/kinetria/kinetria-back/internal/kinetria/gateways/http"
@@ -51,6 +52,18 @@ func main() {
 				repositories.NewRefreshTokenRepository,
 				fx.As(new(ports.RefreshTokenRepository)),
 			),
+			fx.Annotate(
+				repositories.NewSessionRepository,
+				fx.As(new(ports.SessionRepository)),
+			),
+			fx.Annotate(
+				repositories.NewWorkoutRepository,
+				fx.As(new(ports.WorkoutRepository)),
+			),
+			fx.Annotate(
+				repositories.NewAuditLogRepository,
+				fx.As(new(ports.AuditLogRepository)),
+			),
 
 			// Use cases
 			func(userRepo ports.UserRepository, refreshTokenRepo ports.RefreshTokenRepository, tokenMgr ports.TokenManager, cfg config.Config) *domainauth.RegisterUC {
@@ -63,11 +76,13 @@ func main() {
 				return domainauth.NewRefreshTokenUC(refreshTokenRepo, tokenMgr, cfg.JWTExpiry, cfg.RefreshTokenExpiry)
 			},
 			domainauth.NewLogoutUC,
+			domainsessions.NewStartSessionUC,
 
 			// Validator and HTTP
 			validator.New,
 			healthhandler.NewHealthHandler,
 			httpgateway.NewAuthHandler,
+			httpgateway.NewSessionsHandler,
 			httpgateway.NewServiceRouter,
 			chi.NewRouter,
 		),
