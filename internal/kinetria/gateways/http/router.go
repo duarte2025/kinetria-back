@@ -6,12 +6,16 @@ import (
 
 // ServiceRouter mounts all API routes for the kinetria service.
 type ServiceRouter struct {
-	authHandler *AuthHandler
+	authHandler     *AuthHandler
+	workoutsHandler *WorkoutsHandler
 }
 
 // NewServiceRouter creates a new ServiceRouter with the provided handlers.
-func NewServiceRouter(authHandler *AuthHandler) ServiceRouter {
-	return ServiceRouter{authHandler: authHandler}
+func NewServiceRouter(authHandler *AuthHandler, workoutsHandler *WorkoutsHandler) ServiceRouter {
+	return ServiceRouter{
+		authHandler:     authHandler,
+		workoutsHandler: workoutsHandler,
+	}
 }
 
 // Pattern returns the base path prefix for all routes.
@@ -27,4 +31,7 @@ func (s ServiceRouter) Router(router chi.Router) {
 		r.Post("/refresh", s.authHandler.RefreshToken)
 		r.Post("/logout", s.authHandler.Logout)
 	})
+
+	// Workouts (authenticated)
+	router.Get("/workouts", s.workoutsHandler.ListWorkouts)
 }
