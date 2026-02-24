@@ -7,6 +7,7 @@ import (
 
 	domainauth "github.com/kinetria/kinetria-back/internal/kinetria/domain/auth"
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/ports"
+	domainsessions "github.com/kinetria/kinetria-back/internal/kinetria/domain/sessions"
 	domainworkouts "github.com/kinetria/kinetria-back/internal/kinetria/domain/workouts"
 	gatewayauth "github.com/kinetria/kinetria-back/internal/kinetria/gateways/auth"
 	"github.com/kinetria/kinetria-back/internal/kinetria/gateways/config"
@@ -53,8 +54,16 @@ func main() {
 				fx.As(new(ports.RefreshTokenRepository)),
 			),
 			fx.Annotate(
+				repositories.NewSessionRepository,
+				fx.As(new(ports.SessionRepository)),
+			),
+			fx.Annotate(
 				repositories.NewWorkoutRepository,
 				fx.As(new(ports.WorkoutRepository)),
+			),
+			fx.Annotate(
+				repositories.NewAuditLogRepository,
+				fx.As(new(ports.AuditLogRepository)),
 			),
 
 			// Use cases
@@ -68,12 +77,14 @@ func main() {
 				return domainauth.NewRefreshTokenUC(refreshTokenRepo, tokenMgr, cfg.JWTExpiry, cfg.RefreshTokenExpiry)
 			},
 			domainauth.NewLogoutUC,
+			domainsessions.NewStartSessionUC,
 			domainworkouts.NewListWorkoutsUC,
 
 			// Validator and HTTP
 			validator.New,
 			healthhandler.NewHealthHandler,
 			httpgateway.NewAuthHandler,
+			httpgateway.NewSessionsHandler,
 			httpgateway.NewWorkoutsHandler,
 			httpgateway.NewServiceRouter,
 			chi.NewRouter,

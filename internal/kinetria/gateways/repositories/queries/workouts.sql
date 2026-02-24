@@ -1,3 +1,8 @@
+-- name: ExistsWorkoutByIDAndUserID :one
+SELECT EXISTS(
+    SELECT 1 FROM workouts WHERE id = $1 AND user_id = $2
+) AS "exists";
+
 -- name: ListWorkoutsByUserID :many
 SELECT id, user_id, name, description, type, intensity, duration, image_url, created_at, updated_at
 FROM workouts

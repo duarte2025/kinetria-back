@@ -19,6 +19,14 @@ func NewWorkoutRepository(db *sql.DB) *WorkoutRepository {
 	return &WorkoutRepository{q: queries.New(db)}
 }
 
+// ExistsByIDAndUserID checks if a workout exists for the given ID and user ID.
+func (r *WorkoutRepository) ExistsByIDAndUserID(ctx context.Context, workoutID, userID uuid.UUID) (bool, error) {
+	return r.q.ExistsWorkoutByIDAndUserID(ctx, queries.ExistsWorkoutByIDAndUserIDParams{
+		ID:     workoutID,
+		UserID: userID,
+	})
+}
+
 // ListByUserID returns paginated workouts for a user.
 func (r *WorkoutRepository) ListByUserID(ctx context.Context, userID uuid.UUID, offset, limit int) ([]entities.Workout, int, error) {
 	// Count total workouts for the user

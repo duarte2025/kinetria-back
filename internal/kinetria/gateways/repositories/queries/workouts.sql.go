@@ -11,6 +11,37 @@ import (
 	"github.com/google/uuid"
 )
 
+const countWorkoutsByUserID = `-- name: CountWorkoutsByUserID :one
+SELECT COUNT(*)
+FROM workouts
+WHERE user_id = $1
+`
+
+func (q *Queries) CountWorkoutsByUserID(ctx context.Context, userID uuid.UUID) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countWorkoutsByUserID, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const existsWorkoutByIDAndUserID = `-- name: ExistsWorkoutByIDAndUserID :one
+SELECT EXISTS(
+    SELECT 1 FROM workouts WHERE id = $1 AND user_id = $2
+) AS "exists"
+`
+
+type ExistsWorkoutByIDAndUserIDParams struct {
+	ID     uuid.UUID `json:"id"`
+	UserID uuid.UUID `json:"user_id"`
+}
+
+func (q *Queries) ExistsWorkoutByIDAndUserID(ctx context.Context, arg ExistsWorkoutByIDAndUserIDParams) (bool, error) {
+	row := q.db.QueryRowContext(ctx, existsWorkoutByIDAndUserID, arg.ID, arg.UserID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const listWorkoutsByUserID = `-- name: ListWorkoutsByUserID :many
 SELECT id, user_id, name, description, type, intensity, duration, image_url, created_at, updated_at
 FROM workouts
@@ -57,17 +88,4 @@ func (q *Queries) ListWorkoutsByUserID(ctx context.Context, arg ListWorkoutsByUs
 		return nil, err
 	}
 	return items, nil
-}
-
-const countWorkoutsByUserID = `-- name: CountWorkoutsByUserID :one
-SELECT COUNT(*)
-FROM workouts
-WHERE user_id = $1
-`
-
-func (q *Queries) CountWorkoutsByUserID(ctx context.Context, userID uuid.UUID) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countWorkoutsByUserID, userID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
 }

@@ -14,4 +14,8 @@ var (
 	ErrTokenExpired       = errors.New("token expired")
 	ErrTokenRevoked       = errors.New("token revoked")
 	ErrTokenInvalid       = errors.New("token invalid")
+
+	// Session errors
+	ErrActiveSessionExists = errors.New("user already has an active session")
+	ErrWorkoutNotFound     = errors.New("workout not found")
 )

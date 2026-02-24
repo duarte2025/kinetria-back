@@ -22,3 +22,14 @@ type RefreshTokenRepository interface {
 	RevokeByToken(ctx context.Context, tokenHash string) error
 	RevokeAllByUserID(ctx context.Context, userID uuid.UUID) error
 }
+
+// SessionRepository defines persistence operations for workout sessions.
+type SessionRepository interface {
+	Create(ctx context.Context, session *entities.Session) error
+	FindActiveByUserID(ctx context.Context, userID uuid.UUID) (*entities.Session, error)
+}
+
+// AuditLogRepository defines persistence for audit log entries (append-only).
+type AuditLogRepository interface {
+	Append(ctx context.Context, entry *entities.AuditLog) error
+}

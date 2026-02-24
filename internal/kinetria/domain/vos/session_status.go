@@ -18,10 +18,17 @@ func (s SessionStatus) String() string {
 	return string(s)
 }
 
-func (s SessionStatus) Validate() error {
+func (s SessionStatus) IsValid() bool {
 	switch s {
 	case SessionStatusActive, SessionStatusCompleted, SessionStatusAbandoned:
-		return nil
+		return true
 	}
-	return fmt.Errorf("invalid session status %q: %w", string(s), domerrors.ErrMalformedParameters)
+	return false
+}
+
+func (s SessionStatus) Validate() error {
+	if !s.IsValid() {
+		return fmt.Errorf("invalid session status %q: %w", string(s), domerrors.ErrMalformedParameters)
+	}
+	return nil
 }

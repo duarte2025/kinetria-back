@@ -9,6 +9,9 @@ import (
 
 // WorkoutRepository defines persistence operations for workouts.
 type WorkoutRepository interface {
+	// ExistsByIDAndUserID checks if a workout exists for the given user.
+	ExistsByIDAndUserID(ctx context.Context, workoutID, userID uuid.UUID) (bool, error)
+
 	// ListByUserID returns paginated workouts for a user.
 	// Parameters:
 	//   - ctx: context for cancellation/timeout

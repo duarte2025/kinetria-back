@@ -24,6 +24,10 @@ func (m *mockWorkoutRepo) ListByUserID(ctx context.Context, userID uuid.UUID, of
 	return nil, 0, nil
 }
 
+func (m *mockWorkoutRepo) ExistsByIDAndUserID(_ context.Context, _, _ uuid.UUID) (bool, error) {
+	return false, nil
+}
+
 func TestListWorkoutsUC_Execute(t *testing.T) {
 	validUserID := uuid.New()
 	now := time.Now()
