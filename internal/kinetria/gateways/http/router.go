@@ -2,7 +2,6 @@ package service
 
 import (
 	"github.com/go-chi/chi/v5"
-	httpSwagger "github.com/swaggo/http-swagger"
 	gatewayauth "github.com/kinetria/kinetria-back/internal/kinetria/gateways/auth"
 	httpSwagger "github.com/swaggo/http-swagger"
 )

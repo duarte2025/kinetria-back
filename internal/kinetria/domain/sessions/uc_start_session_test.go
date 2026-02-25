@@ -63,6 +63,10 @@ func (m *mockWorkoutRepository) ListByUserID(_ context.Context, _ uuid.UUID, _, 
 	return nil, 0, nil
 }
 
+func (m *mockWorkoutRepository) GetByID(_ context.Context, _, _ uuid.UUID) (*entities.Workout, []entities.Exercise, error) {
+	return nil, nil, nil
+}
+
 func (m *mockWorkoutRepository) GetFirstByUserID(_ context.Context, _ uuid.UUID) (*entities.Workout, error) {
 	return nil, nil
 }
