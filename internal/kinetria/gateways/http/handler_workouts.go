@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	domainworkouts "github.com/kinetria/kinetria-back/internal/kinetria/domain/workouts"
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/entities"
+	domainworkouts "github.com/kinetria/kinetria-back/internal/kinetria/domain/workouts"
 	gatewayauth "github.com/kinetria/kinetria-back/internal/kinetria/gateways/auth"
 )
 
@@ -22,6 +22,28 @@ type WorkoutSummaryDTO struct {
 	Intensity   *string `json:"intensity"`
 	Duration    int     `json:"duration"`
 	ImageURL    *string `json:"imageUrl"`
+}
+
+type ExerciseDTO struct {
+	ID           string   `json:"id"`
+	Name         string   `json:"name"`
+	ThumbnailURL *string  `json:"thumbnailUrl"`
+	Sets         int      `json:"sets"`
+	Reps         string   `json:"reps"`
+	Muscles      []string `json:"muscles"`
+	RestTime     int      `json:"restTime"`
+	Weight       *int     `json:"weight"`
+}
+
+type WorkoutDTO struct {
+	ID          string        `json:"id"`
+	Name        string        `json:"name"`
+	Description *string       `json:"description"`
+	Type        *string       `json:"type"`
+	Intensity   *string       `json:"intensity"`
+	Duration    int           `json:"duration"`
+	ImageURL    *string       `json:"imageUrl"`
+	Exercises   []ExerciseDTO `json:"exercises"`
 }
 
 type PaginationMetaDTO struct {
@@ -54,6 +76,56 @@ func mapWorkoutToSummaryDTO(w entities.Workout) WorkoutSummaryDTO {
 	if w.ImageURL != "" {
 		dto.ImageURL = &w.ImageURL
 	}
+	return dto
+}
+
+func mapExerciseToDTO(e entities.Exercise) ExerciseDTO {
+	dto := ExerciseDTO{
+		ID:       e.ID.String(),
+		Name:     e.Name,
+		Sets:     e.Sets,
+		Reps:     e.Reps,
+		Muscles:  e.Muscles,
+		RestTime: e.RestTime,
+	}
+
+	if e.ThumbnailURL != "" {
+		dto.ThumbnailURL = &e.ThumbnailURL
+	}
+	if e.Weight > 0 {
+		dto.Weight = &e.Weight
+	}
+
+	return dto
+}
+
+func mapWorkoutToFullDTO(w entities.Workout, exercises []entities.Exercise) WorkoutDTO {
+	dto := WorkoutDTO{
+		ID:        w.ID.String(),
+		Name:      w.Name,
+		Duration:  w.Duration,
+		Exercises: make([]ExerciseDTO, len(exercises)),
+	}
+
+	// Mapear campos opcionais do workout
+	if w.Description != "" {
+		dto.Description = &w.Description
+	}
+	if w.Type != "" {
+		dto.Type = &w.Type
+	}
+	if w.Intensity != "" {
+		dto.Intensity = &w.Intensity
+	}
+	if w.ImageURL != "" {
+		dto.ImageURL = &w.ImageURL
+	}
+
+	// Mapear exercises
+	for i, exercise := range exercises {
+		dto.Exercises[i] = mapExerciseToDTO(exercise)
+	}
+
 	return dto
 }
 
