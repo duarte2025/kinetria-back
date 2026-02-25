@@ -2,6 +2,7 @@ package ports
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/entities"
@@ -27,6 +28,19 @@ type RefreshTokenRepository interface {
 type SessionRepository interface {
 	Create(ctx context.Context, session *entities.Session) error
 	FindActiveByUserID(ctx context.Context, userID uuid.UUID) (*entities.Session, error)
+	FindByID(ctx context.Context, sessionID uuid.UUID) (*entities.Session, error)
+	UpdateStatus(ctx context.Context, sessionID uuid.UUID, status string, finishedAt *time.Time, notes string) error
+}
+
+// SetRecordRepository defines persistence operations for set records.
+type SetRecordRepository interface {
+	Create(ctx context.Context, setRecord *entities.SetRecord) error
+	FindBySessionExerciseSet(ctx context.Context, sessionID, exerciseID uuid.UUID, setNumber int) (*entities.SetRecord, error)
+}
+
+// ExerciseRepository defines persistence operations for exercises.
+type ExerciseRepository interface {
+	ExistsByIDAndWorkoutID(ctx context.Context, exerciseID, workoutID uuid.UUID) (bool, error)
 }
 
 // AuditLogRepository defines persistence for audit log entries (append-only).
