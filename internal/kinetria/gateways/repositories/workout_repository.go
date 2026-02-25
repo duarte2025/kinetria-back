@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"database/sql"
+	"errors"
 
 	"github.com/google/uuid"
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/entities"
@@ -52,6 +53,21 @@ func (r *WorkoutRepository) ListByUserID(ctx context.Context, userID uuid.UUID, 
 	}
 
 	return workouts, int(total), nil
+}
+
+// GetFirstByUserID retorna o primeiro workout do usuário (ordenado por created_at ASC).
+// Retorna nil se o usuário não tiver workouts.
+func (r *WorkoutRepository) GetFirstByUserID(ctx context.Context, userID uuid.UUID) (*entities.Workout, error) {
+	row, err := r.q.GetFirstWorkoutByUserID(ctx, userID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	workout := mapSQLCWorkoutToEntity(row)
+	return &workout, nil
 }
 
 // mapSQLCWorkoutToEntity converts a queries.Workout (SQLC) to entities.Workout (domain).
