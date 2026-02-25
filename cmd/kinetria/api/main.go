@@ -58,6 +58,14 @@ func main() {
 				fx.As(new(ports.SessionRepository)),
 			),
 			fx.Annotate(
+				repositories.NewSetRecordRepository,
+				fx.As(new(ports.SetRecordRepository)),
+			),
+			fx.Annotate(
+				repositories.NewExerciseRepository,
+				fx.As(new(ports.ExerciseRepository)),
+			),
+			fx.Annotate(
 				repositories.NewWorkoutRepository,
 				fx.As(new(ports.WorkoutRepository)),
 			),
@@ -78,6 +86,9 @@ func main() {
 			},
 			domainauth.NewLogoutUC,
 			domainsessions.NewStartSessionUC,
+			domainsessions.NewRecordSetUseCase,
+			domainsessions.NewFinishSessionUseCase,
+			domainsessions.NewAbandonSessionUseCase,
 			domainworkouts.NewListWorkoutsUC,
 
 			// Validator and HTTP
