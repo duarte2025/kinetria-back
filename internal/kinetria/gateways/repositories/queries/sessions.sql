@@ -13,7 +13,7 @@ SELECT id, user_id, workout_id, started_at, finished_at, status, notes, created_
 FROM sessions
 WHERE id = $1;
 
--- name: UpdateSessionStatus :exec
+-- name: UpdateSessionStatus :execrows
 UPDATE sessions
 SET status = $2, finished_at = $3, notes = $4, updated_at = $5
-WHERE id = $1;
+WHERE id = $1 AND status = 'active';

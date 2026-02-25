@@ -3,6 +3,7 @@ package sessions
 import (
 	"context"
 	"database/sql"
+	stdErrors "errors"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -62,11 +63,14 @@ func (uc *RecordSetUseCase) Execute(ctx context.Context, input RecordSetInput) (
 	if input.SetNumber < 1 || input.Weight < 0 || input.Reps < 0 {
 		return RecordSetOutput{}, errors.ErrMalformedParameters
 	}
+	if err := input.Status.Validate(); err != nil {
+		return RecordSetOutput{}, errors.ErrMalformedParameters
+	}
 
 	// Find session and validate ownership
 	session, err := uc.sessionRepo.FindByID(ctx, input.SessionID)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if stdErrors.Is(err, sql.ErrNoRows) {
 			return RecordSetOutput{}, errors.ErrNotFound
 		}
 		return RecordSetOutput{}, fmt.Errorf("failed to find session: %w", err)

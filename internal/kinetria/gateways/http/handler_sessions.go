@@ -3,11 +3,13 @@ package service
 import (
 	"encoding/json"
 	"errors"
+	"math"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	domainsessions "github.com/kinetria/kinetria-back/internal/kinetria/domain/sessions"
 	domainerrors "github.com/kinetria/kinetria-back/internal/kinetria/domain/errors"
+	domainsessions "github.com/kinetria/kinetria-back/internal/kinetria/domain/sessions"
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/vos"
 )
 
@@ -93,13 +95,15 @@ func (h *SessionsHandler) StartSession(w http.ResponseWriter, r *http.Request) {
 
 // RecordSet handles POST /sessions/:id/sets
 func (h *SessionsHandler) RecordSet(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MB limit
+
 	userID, ok := r.Context().Value(userIDKey).(uuid.UUID)
 	if !ok {
 		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Invalid or expired access token.")
 		return
 	}
 
-	sessionID, err := uuid.Parse(r.PathValue("sessionId"))
+	sessionID, err := uuid.Parse(chi.URLParam(r, "sessionId"))
 	if err != nil {
 		writeError(w, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Invalid sessionId format.")
 		return
@@ -128,12 +132,14 @@ func (h *SessionsHandler) RecordSet(w http.ResponseWriter, r *http.Request) {
 		SessionID:  sessionID,
 		ExerciseID: exerciseID,
 		SetNumber:  req.SetNumber,
-		Weight:     int(req.Weight * 1000), // kg to grams
+		Weight:     int(math.Round(req.Weight * 1000)), // kg to grams, rounded
 		Reps:       req.Reps,
 		Status:     vos.SetRecordStatus(req.Status),
 	})
 	if err != nil {
 		switch {
+		case errors.Is(err, domainerrors.ErrMalformedParameters):
+			writeError(w, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Invalid parameters provided.")
 		case errors.Is(err, domainerrors.ErrNotFound):
 			writeError(w, http.StatusNotFound, "SESSION_NOT_FOUND", "Session not found.")
 		case errors.Is(err, domainerrors.ErrSessionNotActive):
@@ -162,13 +168,15 @@ func (h *SessionsHandler) RecordSet(w http.ResponseWriter, r *http.Request) {
 
 // FinishSession handles PATCH /sessions/:id/finish
 func (h *SessionsHandler) FinishSession(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MB limit
+
 	userID, ok := r.Context().Value(userIDKey).(uuid.UUID)
 	if !ok {
 		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Invalid or expired access token.")
 		return
 	}
 
-	sessionID, err := uuid.Parse(r.PathValue("sessionId"))
+	sessionID, err := uuid.Parse(chi.URLParam(r, "sessionId"))
 	if err != nil {
 		writeError(w, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Invalid sessionId format.")
 		return
@@ -177,7 +185,12 @@ func (h *SessionsHandler) FinishSession(w http.ResponseWriter, r *http.Request) 
 	var req struct {
 		Notes string `json:"notes"`
 	}
-	_ = json.NewDecoder(r.Body).Decode(&req)
+	if r.ContentLength != 0 {
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeError(w, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Request body is invalid.")
+			return
+		}
+	}
 
 	output, err := h.finishSessionUC.Execute(r.Context(), domainsessions.FinishSessionInput{
 		UserID:    userID,
@@ -208,13 +221,15 @@ func (h *SessionsHandler) FinishSession(w http.ResponseWriter, r *http.Request) 
 
 // AbandonSession handles PATCH /sessions/:id/abandon
 func (h *SessionsHandler) AbandonSession(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MB limit
+
 	userID, ok := r.Context().Value(userIDKey).(uuid.UUID)
 	if !ok {
 		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Invalid or expired access token.")
 		return
 	}
 
-	sessionID, err := uuid.Parse(r.PathValue("sessionId"))
+	sessionID, err := uuid.Parse(chi.URLParam(r, "sessionId"))
 	if err != nil {
 		writeError(w, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Invalid sessionId format.")
 		return

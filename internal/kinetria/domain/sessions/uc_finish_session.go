@@ -3,6 +3,7 @@ package sessions
 import (
 	"context"
 	"database/sql"
+	stdErrors "errors"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -53,7 +54,7 @@ func (uc *FinishSessionUseCase) Execute(ctx context.Context, input FinishSession
 	// Find session and validate ownership
 	session, err := uc.sessionRepo.FindByID(ctx, input.SessionID)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if stdErrors.Is(err, sql.ErrNoRows) {
 			return FinishSessionOutput{}, errors.ErrNotFound
 		}
 		return FinishSessionOutput{}, fmt.Errorf("failed to find session: %w", err)
@@ -69,8 +70,12 @@ func (uc *FinishSessionUseCase) Execute(ctx context.Context, input FinishSession
 
 	// Update session
 	now := time.Now()
-	if err := uc.sessionRepo.UpdateStatus(ctx, input.SessionID, vos.SessionStatusCompleted.String(), &now, input.Notes); err != nil {
+	updated, err := uc.sessionRepo.UpdateStatus(ctx, input.SessionID, vos.SessionStatusCompleted.String(), &now, input.Notes)
+	if err != nil {
 		return FinishSessionOutput{}, fmt.Errorf("failed to update session: %w", err)
+	}
+	if !updated {
+		return FinishSessionOutput{}, errors.ErrSessionAlreadyClosed
 	}
 
 	// Update local entity

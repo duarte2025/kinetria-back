@@ -114,10 +114,10 @@ func (q *Queries) FindSessionByID(ctx context.Context, id uuid.UUID) (FindSessio
 	return i, err
 }
 
-const updateSessionStatus = `-- name: UpdateSessionStatus :exec
+const updateSessionStatus = `-- name: UpdateSessionStatus :execrows
 UPDATE sessions
 SET status = $2, finished_at = $3, notes = $4, updated_at = $5
-WHERE id = $1
+WHERE id = $1 AND status = 'active'
 `
 
 type UpdateSessionStatusParams struct {
@@ -128,13 +128,16 @@ type UpdateSessionStatusParams struct {
 	UpdatedAt  time.Time    `json:"updated_at"`
 }
 
-func (q *Queries) UpdateSessionStatus(ctx context.Context, arg UpdateSessionStatusParams) error {
-	_, err := q.db.ExecContext(ctx, updateSessionStatus,
+func (q *Queries) UpdateSessionStatus(ctx context.Context, arg UpdateSessionStatusParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateSessionStatus,
 		arg.ID,
 		arg.Status,
 		arg.FinishedAt,
 		arg.Notes,
 		arg.UpdatedAt,
 	)
-	return err
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
