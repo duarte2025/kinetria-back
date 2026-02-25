@@ -34,6 +34,14 @@ func (m *mockSessionRepository) FindActiveByUserID(ctx context.Context, userID u
 	return m.findActiveResponse, nil
 }
 
+func (m *mockSessionRepository) FindByID(ctx context.Context, sessionID uuid.UUID) (*entities.Session, error) {
+	return nil, nil
+}
+
+func (m *mockSessionRepository) UpdateStatus(ctx context.Context, sessionID uuid.UUID, status string, finishedAt *time.Time, notes string) error {
+	return nil
+}
+
 // mockWorkoutRepository is a mock implementation of ports.WorkoutRepository for testing.
 type mockWorkoutRepository struct {
 	existsResponse bool
