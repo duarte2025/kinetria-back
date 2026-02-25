@@ -7,3 +7,13 @@ SELECT id, user_id, workout_id, started_at, finished_at, status, notes, created_
 FROM sessions
 WHERE user_id = $1 AND status = 'active'
 LIMIT 1;
+
+-- name: FindSessionByID :one
+SELECT id, user_id, workout_id, started_at, finished_at, status, notes, created_at, updated_at
+FROM sessions
+WHERE id = $1;
+
+-- name: UpdateSessionStatus :exec
+UPDATE sessions
+SET status = $2, finished_at = $3, notes = $4, updated_at = $5
+WHERE id = $1;
