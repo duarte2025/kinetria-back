@@ -120,6 +120,12 @@ func main() {
 			domaindashboard.NewGetWeekProgressUC,
 			domaindashboard.NewGetWeekStatsUC,
 
+			// Dashboard use cases
+			domaindashboard.NewGetUserProfileUC,
+			domaindashboard.NewGetTodayWorkoutUC,
+			domaindashboard.NewGetWeekProgressUC,
+			domaindashboard.NewGetWeekStatsUC,
+
 			// Validator and HTTP
 			validator.New,
 			healthhandler.NewHealthHandler,
