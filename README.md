@@ -89,6 +89,16 @@ Para reaplicar as migrations: `docker-compose down -v && docker-compose up -d`
 | Método | Rota | Descrição |
 |--------|------|-----------|
 | GET | `/health` | Health check da aplicação |
+| POST | `/api/v1/auth/register` | Registrar novo usuário |
+| POST | `/api/v1/auth/login` | Login de usuário |
+| POST | `/api/v1/auth/refresh` | Renovar token de acesso |
+| POST | `/api/v1/auth/logout` | Logout de usuário |
+| GET | `/api/v1/dashboard` | Dashboard do usuário (requer autenticação) |
+| GET | `/api/v1/workouts` | Listar workouts do usuário (requer autenticação) |
+| POST | `/api/v1/sessions` | Iniciar sessão de treino (requer autenticação) |
+| POST | `/api/v1/sessions/{id}/sets` | Registrar série executada (requer autenticação) |
+| PATCH | `/api/v1/sessions/{id}/finish` | Finalizar sessão (requer autenticação) |
+| PATCH | `/api/v1/sessions/{id}/abandon` | Abandonar sessão (requer autenticação) |
 
 ### Exemplo de resposta
 
@@ -103,6 +113,22 @@ curl http://localhost:8080/health
   "version": "undefined"
 }
 ```
+
+### Dashboard
+
+```bash
+# Registrar usuário
+TOKEN=$(curl -X POST http://localhost:8080/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Test","email":"test@example.com","password":"Password123!"}' \
+  | jq -r '.data.accessToken')
+
+# Obter dashboard
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8080/api/v1/dashboard | jq
+```
+
+Ver documentação completa em `internal/kinetria/domain/dashboard/README.md`.
 
 ## Testes
 
