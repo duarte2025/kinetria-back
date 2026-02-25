@@ -112,6 +112,7 @@ func main() {
 			domainsessions.NewFinishSessionUseCase,
 			domainsessions.NewAbandonSessionUseCase,
 			domainworkouts.NewListWorkoutsUC,
+			domainworkouts.NewGetWorkoutUC,
 
 			// Dashboard use cases
 			domaindashboard.NewGetUserProfileUC,
