@@ -38,3 +38,7 @@ tidy: ## Organiza as dependências
 .PHONY: deps
 deps: ## Instala as dependências
 	go mod download
+
+.PHONY: swagger
+swagger: ## Gera documentação Swagger/OpenAPI
+	swag init -g cmd/kinetria/api/main.go -o docs --parseDependency --parseInternal

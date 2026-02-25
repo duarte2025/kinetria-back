@@ -1,0 +1,749 @@
+basePath: /
+definitions:
+  internal_kinetria_gateways_http.AbandonSessionRequest:
+    properties:
+      notes:
+        example: Precisei sair mais cedo
+        type: string
+    type: object
+  internal_kinetria_gateways_http.AuthResponse:
+    properties:
+      accessToken:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+      expiresIn:
+        example: 3600
+        type: integer
+      refreshToken:
+        example: abc123def456...
+        type: string
+    type: object
+  internal_kinetria_gateways_http.DashboardResponse:
+    properties:
+      stats:
+        $ref: '#/definitions/internal_kinetria_gateways_http.WeekStats'
+      todayWorkout:
+        $ref: '#/definitions/internal_kinetria_gateways_http.TodayWorkout'
+      user:
+        $ref: '#/definitions/internal_kinetria_gateways_http.DashboardUser'
+      weekProgress:
+        items:
+          $ref: '#/definitions/internal_kinetria_gateways_http.DayProgress'
+        type: array
+    type: object
+  internal_kinetria_gateways_http.DashboardUser:
+    properties:
+      email:
+        example: bruno@example.com
+        type: string
+      id:
+        example: b67a784a-e54b-4330-9b6b-8dd930c4a746
+        type: string
+      name:
+        example: Bruno Costa
+        type: string
+      profileImageUrl:
+        example: /assets/avatars/default.png
+        type: string
+    type: object
+  internal_kinetria_gateways_http.DayProgress:
+    properties:
+      date:
+        example: "2026-02-25"
+        type: string
+      day:
+        example: Q
+        type: string
+      status:
+        enum:
+        - completed
+        - missed
+        - future
+        example: completed
+        type: string
+    type: object
+  internal_kinetria_gateways_http.ErrorResponse:
+    properties:
+      code:
+        example: VALIDATION_ERROR
+        type: string
+      message:
+        example: Invalid request body
+        type: string
+    type: object
+  internal_kinetria_gateways_http.FinishSessionRequest:
+    properties:
+      notes:
+        example: Treino completo! Ótima performance.
+        type: string
+    type: object
+  internal_kinetria_gateways_http.LoginRequest:
+    properties:
+      email:
+        example: bruno@example.com
+        type: string
+      password:
+        example: Password123!
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  internal_kinetria_gateways_http.LogoutRequest:
+    properties:
+      refreshToken:
+        example: abc123def456...
+        type: string
+    required:
+    - refreshToken
+    type: object
+  internal_kinetria_gateways_http.MessageResponse:
+    properties:
+      message:
+        example: Logged out successfully
+        type: string
+    type: object
+  internal_kinetria_gateways_http.PaginationMeta:
+    properties:
+      limit:
+        example: 10
+        type: integer
+      page:
+        example: 1
+        type: integer
+      total:
+        example: 25
+        type: integer
+      totalPages:
+        example: 3
+        type: integer
+    type: object
+  internal_kinetria_gateways_http.RecordSetRequest:
+    properties:
+      exerciseId:
+        example: e1f2g3h4-i5j6-7890-abcd-ef1234567890
+        type: string
+      reps:
+        example: 12
+        minimum: 0
+        type: integer
+      setNumber:
+        example: 1
+        minimum: 1
+        type: integer
+      status:
+        enum:
+        - completed
+        - skipped
+        example: completed
+        type: string
+      weight:
+        example: 80.5
+        minimum: 0
+        type: number
+    required:
+    - exerciseId
+    - reps
+    - setNumber
+    - status
+    type: object
+  internal_kinetria_gateways_http.RecordSetResponse:
+    properties:
+      exerciseId:
+        example: e1f2g3h4-i5j6-7890-abcd-ef1234567890
+        type: string
+      reps:
+        example: 12
+        type: integer
+      setNumber:
+        example: 1
+        type: integer
+      setRecordId:
+        example: s1t2u3v4-w5x6-7890-abcd-ef1234567890
+        type: string
+      status:
+        example: completed
+        type: string
+      weight:
+        example: 80.5
+        type: number
+    type: object
+  internal_kinetria_gateways_http.RefreshResponse:
+    properties:
+      accessToken:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+      expiresIn:
+        example: 3600
+        type: integer
+    type: object
+  internal_kinetria_gateways_http.RefreshTokenRequest:
+    properties:
+      refreshToken:
+        example: abc123def456...
+        type: string
+    required:
+    - refreshToken
+    type: object
+  internal_kinetria_gateways_http.RegisterRequest:
+    properties:
+      email:
+        example: bruno@example.com
+        type: string
+      name:
+        example: Bruno Costa
+        type: string
+      password:
+        example: Password123!
+        minLength: 8
+        type: string
+    required:
+    - email
+    - name
+    - password
+    type: object
+  internal_kinetria_gateways_http.SessionStatusResponse:
+    properties:
+      finishedAt:
+        example: "2026-02-25T16:15:00Z"
+        type: string
+      sessionId:
+        example: f1e2d3c4-b5a6-7890-1234-567890abcdef
+        type: string
+      status:
+        example: completed
+        type: string
+    type: object
+  internal_kinetria_gateways_http.StartSessionRequest:
+    properties:
+      notes:
+        example: Treino de peito e tríceps
+        type: string
+      workoutId:
+        example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        type: string
+    required:
+    - workoutId
+    type: object
+  internal_kinetria_gateways_http.StartSessionResponse:
+    properties:
+      sessionId:
+        example: f1e2d3c4-b5a6-7890-1234-567890abcdef
+        type: string
+      startedAt:
+        example: "2026-02-25T15:30:00Z"
+        type: string
+      status:
+        example: active
+        type: string
+      workoutId:
+        example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        type: string
+    type: object
+  internal_kinetria_gateways_http.SuccessResponse:
+    properties:
+      data: {}
+    type: object
+  internal_kinetria_gateways_http.TodayWorkout:
+    properties:
+      id:
+        example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        type: string
+      intensity:
+        example: ALTA
+        type: string
+      name:
+        example: Treino A - Peito e Tríceps
+        type: string
+      type:
+        example: HIPERTROFIA
+        type: string
+    type: object
+  internal_kinetria_gateways_http.WeekStats:
+    properties:
+      calories:
+        example: 420
+        type: integer
+      totalTimeMinutes:
+        example: 60
+        type: integer
+    type: object
+  internal_kinetria_gateways_http.Workout:
+    properties:
+      id:
+        example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        type: string
+      intensity:
+        example: ALTA
+        type: string
+      name:
+        example: Treino A - Peito e Tríceps
+        type: string
+      type:
+        example: HIPERTROFIA
+        type: string
+    type: object
+  internal_kinetria_gateways_http.WorkoutListResponse:
+    properties:
+      pagination:
+        $ref: '#/definitions/internal_kinetria_gateways_http.PaginationMeta'
+      workouts:
+        items:
+          $ref: '#/definitions/internal_kinetria_gateways_http.Workout'
+        type: array
+    type: object
+  internal_kinetria_gateways_http_health.HealthResponse:
+    properties:
+      service:
+        example: kinetria
+        type: string
+      status:
+        example: healthy
+        type: string
+      version:
+        example: undefined
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@kinetria.com
+    name: API Support
+  description: API para gerenciamento de treinos e acompanhamento de progresso
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: Kinetria API
+  version: "1.0"
+paths:
+  /api/v1/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user and return tokens
+      parameters:
+      - description: Login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_kinetria_gateways_http.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/internal_kinetria_gateways_http.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_kinetria_gateways_http.AuthResponse'
+              type: object
+        "401":
+          description: Invalid credentials
+          schema:
+            $ref: '#/definitions/internal_kinetria_gateways_http.ErrorResponse'
+        "422":
+          description: Validation error
+          schema:
+            $ref: '#/definitions/internal_kinetria_gateways_http.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/internal_kinetria_gateways_http.ErrorResponse'
+      summary: Login user
+      tags:
+      - auth
+  /api/v1/auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Invalidate refresh token
+      parameters:
+      - description: Refresh token to invalidate
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_kinetria_gateways_http.LogoutRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/internal_kinetria_gateways_http.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_kinetria_gateways_http.MessageResponse'
+              type: object
+        "422":
+          description: Validation error
+          schema:
+            $ref: '#/definitions/internal_kinetria_gateways_http.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/internal_kinetria_gateways_http.ErrorResponse'
+      summary: Logout user
+      tags:
+      - auth
+  /api/v1/auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Get a new access token using refresh token
+      parameters:
+      - description: Refresh token
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_kinetria_gateways_http.RefreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/internal_kinetria_gateways_http.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_kinetria_gateways_http.RefreshResponse'
+              type: object
+        "401":
+          description: Invalid or expired refresh token
+          schema:
+            $ref: '#/definitions/internal_kinetria_gateways_http.ErrorResponse'
+        "422":
+          description: Validation error
+          schema:
+            $ref: '#/definitions/internal_kinetria_gateways_http.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/internal_kinetria_gateways_http.ErrorResponse'
+      summary: Refresh access token
+      tags:
+      - auth
+  /api/v1/auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Create a new user account
+      parameters:
+      - description: Registration details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_kinetria_gateways_http.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/internal_kinetria_gateways_http.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_kinetria_gateways_http.AuthResponse'
+              type: object
+        "409":
+          description: Email already exists
+          schema:
+            $ref: '#/definitions/internal_kinetria_gateways_http.ErrorResponse'
+        "422":
+          description: Validation error
+          schema:
+            $ref: '#/definitions/internal_kinetria_gateways_http.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/internal_kinetria_gateways_http.ErrorResponse'
+      summary: Register a new user
+      tags:
+      - auth
+  /api/v1/dashboard:
+    get:
+      description: Get aggregated dashboard data including user profile, today's workout,
+        week progress, and stats
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/internal_kinetria_gateways_http.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_kinetria_gateways_http.DashboardResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_kinetria_gateways_http.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/internal_kinetria_gateways_http.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get user dashboard
+      tags:
+      - dashboard
+  /api/v1/sessions:
+    post:
+      consumes:
+      - application/json
+      description: Start a new workout session for a specific workout
+      parameters:
+      - description: Session details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_kinetria_gateways_http.StartSessionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/internal_kinetria_gateways_http.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_kinetria_gateways_http.StartSessionResponse'
+              type: object
+        "400":
+          description: Active session already exists
+          schema:
+            $ref: '#/definitions/internal_kinetria_gateways_http.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_kinetria_gateways_http.ErrorResponse'
+        "422":
+          description: Validation error
+          schema:
+            $ref: '#/definitions/internal_kinetria_gateways_http.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/internal_kinetria_gateways_http.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Start a workout session
+      tags:
+      - sessions
+  /api/v1/sessions/{sessionId}/abandon:
+    patch:
+      consumes:
+      - application/json
+      description: Mark a workout session as abandoned
+      parameters:
+      - description: Session ID
+        in: path
+        name: sessionId
+        required: true
+        type: string
+      - description: Abandon notes
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_kinetria_gateways_http.AbandonSessionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/internal_kinetria_gateways_http.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_kinetria_gateways_http.SessionStatusResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_kinetria_gateways_http.ErrorResponse'
+        "404":
+          description: Session not found
+          schema:
+            $ref: '#/definitions/internal_kinetria_gateways_http.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/internal_kinetria_gateways_http.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Abandon a workout session
+      tags:
+      - sessions
+  /api/v1/sessions/{sessionId}/finish:
+    patch:
+      consumes:
+      - application/json
+      description: Mark a workout session as completed
+      parameters:
+      - description: Session ID
+        in: path
+        name: sessionId
+        required: true
+        type: string
+      - description: Finish notes
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_kinetria_gateways_http.FinishSessionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/internal_kinetria_gateways_http.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_kinetria_gateways_http.SessionStatusResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_kinetria_gateways_http.ErrorResponse'
+        "404":
+          description: Session not found
+          schema:
+            $ref: '#/definitions/internal_kinetria_gateways_http.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/internal_kinetria_gateways_http.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Finish a workout session
+      tags:
+      - sessions
+  /api/v1/sessions/{sessionId}/sets:
+    post:
+      consumes:
+      - application/json
+      description: Record a completed or skipped set for an exercise
+      parameters:
+      - description: Session ID
+        in: path
+        name: sessionId
+        required: true
+        type: string
+      - description: Set details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_kinetria_gateways_http.RecordSetRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/internal_kinetria_gateways_http.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_kinetria_gateways_http.RecordSetResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_kinetria_gateways_http.ErrorResponse'
+        "404":
+          description: Session not found
+          schema:
+            $ref: '#/definitions/internal_kinetria_gateways_http.ErrorResponse'
+        "422":
+          description: Validation error
+          schema:
+            $ref: '#/definitions/internal_kinetria_gateways_http.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/internal_kinetria_gateways_http.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Record a set
+      tags:
+      - sessions
+  /api/v1/workouts:
+    get:
+      description: Get paginated list of user's workouts
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/internal_kinetria_gateways_http.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_kinetria_gateways_http.WorkoutListResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_kinetria_gateways_http.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/internal_kinetria_gateways_http.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List user workouts
+      tags:
+      - workouts
+  /health:
+    get:
+      description: Check if the service is running
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_kinetria_gateways_http_health.HealthResponse'
+      summary: Health check
+      tags:
+      - health
+schemes:
+- http
+- https
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

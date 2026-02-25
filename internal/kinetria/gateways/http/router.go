@@ -2,6 +2,7 @@ package service
 
 import (
 	"github.com/go-chi/chi/v5"
+	httpSwagger "github.com/swaggo/http-swagger"
 	gatewayauth "github.com/kinetria/kinetria-back/internal/kinetria/gateways/auth"
 )
 
@@ -38,6 +39,9 @@ func (s ServiceRouter) Pattern() string {
 
 // Router registers all routes onto the provided chi.Router.
 func (s ServiceRouter) Router(router chi.Router) {
+	// Swagger documentation
+	router.Get("/swagger/*", httpSwagger.WrapHandler)
+
 	router.Route("/auth", func(r chi.Router) {
 		r.Post("/register", s.authHandler.Register)
 		r.Post("/login", s.authHandler.Login)

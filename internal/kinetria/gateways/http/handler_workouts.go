@@ -71,7 +71,18 @@ func NewWorkoutsHandler(listWorkoutsUC *domainworkouts.ListWorkoutsUC, jwtManage
 	}
 }
 
-// ListWorkouts handles GET /api/v1/workouts
+// ListWorkouts godoc
+// @Summary List user workouts
+// @Description Get paginated list of user's workouts
+// @Tags workouts
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Items per page" default(10)
+// @Success 200 {object} SuccessResponse{data=WorkoutListResponse}
+// @Failure 401 {object} ErrorResponse "Unauthorized"
+// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Router /api/v1/workouts [get]
 func (h *WorkoutsHandler) ListWorkouts(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 

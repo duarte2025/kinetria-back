@@ -42,6 +42,18 @@ func NewAuthHandler(
 }
 
 // Register handles POST /auth/register
+// Register godoc
+// @Summary Register a new user
+// @Description Create a new user account
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body RegisterRequest true "Registration details"
+// @Success 201 {object} SuccessResponse{data=AuthResponse}
+// @Failure 409 {object} ErrorResponse "Email already exists"
+// @Failure 422 {object} ErrorResponse "Validation error"
+// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Router /api/v1/auth/register [post]
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MB limit
 	var req struct {
@@ -81,7 +93,18 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Login handles POST /auth/login
+// Login godoc
+// @Summary Login user
+// @Description Authenticate user and return tokens
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body LoginRequest true "Login credentials"
+// @Success 200 {object} SuccessResponse{data=AuthResponse}
+// @Failure 401 {object} ErrorResponse "Invalid credentials"
+// @Failure 422 {object} ErrorResponse "Validation error"
+// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Router /api/v1/auth/login [post]
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MB limit
 	var req struct {
@@ -116,7 +139,18 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// RefreshToken handles POST /auth/refresh
+// RefreshToken godoc
+// @Summary Refresh access token
+// @Description Get a new access token using refresh token
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body RefreshTokenRequest true "Refresh token"
+// @Success 200 {object} SuccessResponse{data=RefreshResponse}
+// @Failure 401 {object} ErrorResponse "Invalid or expired refresh token"
+// @Failure 422 {object} ErrorResponse "Validation error"
+// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Router /api/v1/auth/refresh [post]
 func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MB limit
 	var req struct {
@@ -152,8 +186,17 @@ func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Logout handles POST /auth/logout
-// Requires Authorization: Bearer <access_token> header with a valid JWT.
+// Logout godoc
+// @Summary Logout user
+// @Description Invalidate refresh token
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body LogoutRequest true "Refresh token to invalidate"
+// @Success 200 {object} SuccessResponse{data=MessageResponse}
+// @Failure 422 {object} ErrorResponse "Validation error"
+// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Router /api/v1/auth/logout [post]
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MB limit
 	// Validate JWT from Authorization header

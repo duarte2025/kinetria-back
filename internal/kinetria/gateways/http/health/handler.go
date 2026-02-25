@@ -8,11 +8,18 @@ import (
 )
 
 type HealthResponse struct {
-	Status  string `json:"status"`
-	Service string `json:"service"`
-	Version string `json:"version"`
+	Status  string `json:"status" example:"healthy"`
+	Service string `json:"service" example:"kinetria"`
+	Version string `json:"version" example:"undefined"`
 }
 
+// HealthCheck godoc
+// @Summary Health check
+// @Description Check if the service is running
+// @Tags health
+// @Produce json
+// @Success 200 {object} HealthResponse
+// @Router /health [get]
 func NewHealthHandler(cfg config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		resp := HealthResponse{

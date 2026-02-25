@@ -28,7 +28,16 @@ func NewDashboardHandler(
 	}
 }
 
-// GetDashboard handles GET /api/v1/dashboard
+// GetDashboard godoc
+// @Summary Get user dashboard
+// @Description Get aggregated dashboard data including user profile, today's workout, week progress, and stats
+// @Tags dashboard
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} SuccessResponse{data=DashboardResponse}
+// @Failure 401 {object} ErrorResponse "Unauthorized"
+// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Router /api/v1/dashboard [get]
 func (h *DashboardHandler) GetDashboard(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 

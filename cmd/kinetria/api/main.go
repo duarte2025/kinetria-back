@@ -5,6 +5,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/fx"
 
+	_ "github.com/kinetria/kinetria-back/docs"
 	domainauth "github.com/kinetria/kinetria-back/internal/kinetria/domain/auth"
 	domaindashboard "github.com/kinetria/kinetria-back/internal/kinetria/domain/dashboard"
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/ports"
@@ -16,6 +17,26 @@ import (
 	healthhandler "github.com/kinetria/kinetria-back/internal/kinetria/gateways/http/health"
 	"github.com/kinetria/kinetria-back/internal/kinetria/gateways/repositories"
 )
+
+// @title Kinetria API
+// @version 1.0
+// @description API para gerenciamento de treinos e acompanhamento de progresso
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name API Support
+// @contact.email support@kinetria.com
+
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
+
+// @host localhost:8080
+// @BasePath /
+// @schemes http https
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token.
 
 var (
 	AppName     = "kinetria"

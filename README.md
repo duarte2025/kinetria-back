@@ -84,6 +84,26 @@ Para reaplicar as migrations: `docker-compose down -v && docker-compose up -d`
 
 ## API
 
+### Documentação Interativa (Swagger)
+
+Acesse a documentação completa e interativa da API em:
+
+```
+http://localhost:8080/api/v1/swagger/index.html
+```
+
+A documentação Swagger permite:
+- ✅ Visualizar todos os endpoints disponíveis
+- ✅ Testar requisições diretamente no navegador
+- ✅ Ver exemplos de request/response
+- ✅ Autenticar com JWT Bearer token
+- ✅ Exportar especificação OpenAPI 3.0
+
+Para regenerar a documentação após mudanças nos handlers:
+```bash
+make swagger
+```
+
 ### Endpoints
 
 | Método | Rota | Descrição |
@@ -116,6 +136,8 @@ curl http://localhost:8080/health
 
 ### Dashboard
 
+Obter dados agregados do dashboard do usuário:
+
 ```bash
 # Registrar usuário
 TOKEN=$(curl -X POST http://localhost:8080/api/v1/auth/register \
@@ -127,6 +149,8 @@ TOKEN=$(curl -X POST http://localhost:8080/api/v1/auth/register \
 curl -H "Authorization: Bearer $TOKEN" \
   http://localhost:8080/api/v1/dashboard | jq
 ```
+
+**Dica**: Use o Swagger UI em `http://localhost:8080/api/v1/swagger/index.html` para testar todos os endpoints interativamente!
 
 Ver documentação completa em `internal/kinetria/domain/dashboard/README.md`.
 
