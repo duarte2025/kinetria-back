@@ -110,3 +110,43 @@ func (r *SessionRepository) UpdateStatus(ctx context.Context, sessionID uuid.UUI
 	}
 	return rowsAffected > 0, nil
 }
+
+// GetCompletedSessionsByUserAndDateRange retorna todas as sessões completed do usuário
+// no intervalo de datas (inclusive).
+func (r *SessionRepository) GetCompletedSessionsByUserAndDateRange(
+	ctx context.Context,
+	userID uuid.UUID,
+	startDate time.Time,
+	endDate time.Time,
+) ([]entities.Session, error) {
+	rows, err := r.q.GetCompletedSessionsByDateRange(ctx, queries.GetCompletedSessionsByDateRangeParams{
+		UserID:      userID,
+		StartedAt:   startDate,
+		StartedAt_2: endDate,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	sessions := make([]entities.Session, 0, len(rows))
+	for _, row := range rows {
+		var finishedAt *time.Time
+		if row.FinishedAt.Valid {
+			finishedAt = &row.FinishedAt.Time
+		}
+
+		sessions = append(sessions, entities.Session{
+			ID:         row.ID,
+			UserID:     row.UserID,
+			WorkoutID:  row.WorkoutID,
+			Status:     vos.SessionStatus(row.Status),
+			Notes:      row.Notes,
+			StartedAt:  row.StartedAt,
+			FinishedAt: finishedAt,
+			CreatedAt:  row.CreatedAt,
+			UpdatedAt:  row.UpdatedAt,
+		})
+	}
+
+	return sessions, nil
+}

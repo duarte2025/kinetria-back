@@ -1,0 +1,1159 @@
+{
+    "schemes": [
+        "http",
+        "https"
+    ],
+    "swagger": "2.0",
+    "info": {
+        "description": "API para gerenciamento de treinos e acompanhamento de progresso",
+        "title": "Kinetria API",
+        "termsOfService": "http://swagger.io/terms/",
+        "contact": {
+            "name": "API Support",
+            "email": "support@kinetria.com"
+        },
+        "license": {
+            "name": "MIT",
+            "url": "https://opensource.org/licenses/MIT"
+        },
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/",
+    "paths": {
+        "/api/v1/auth/login": {
+            "post": {
+                "description": "Authenticate user and return tokens",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Login user",
+                "parameters": [
+                    {
+                        "description": "Login credentials",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/internal_kinetria_gateways_http.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_kinetria_gateways_http.AuthResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid credentials",
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/logout": {
+            "post": {
+                "description": "Invalidate refresh token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Logout user",
+                "parameters": [
+                    {
+                        "description": "Refresh token to invalidate",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.LogoutRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/internal_kinetria_gateways_http.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_kinetria_gateways_http.MessageResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/refresh": {
+            "post": {
+                "description": "Get a new access token using refresh token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Refresh access token",
+                "parameters": [
+                    {
+                        "description": "Refresh token",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.RefreshTokenRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/internal_kinetria_gateways_http.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_kinetria_gateways_http.RefreshResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid or expired refresh token",
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/register": {
+            "post": {
+                "description": "Create a new user account",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Register a new user",
+                "parameters": [
+                    {
+                        "description": "Registration details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.RegisterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/internal_kinetria_gateways_http.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_kinetria_gateways_http.AuthResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "409": {
+                        "description": "Email already exists",
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/dashboard": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get aggregated dashboard data including user profile, today's workout, week progress, and stats",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dashboard"
+                ],
+                "summary": "Get user dashboard",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/internal_kinetria_gateways_http.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_kinetria_gateways_http.DashboardResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/sessions": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Start a new workout session for a specific workout",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sessions"
+                ],
+                "summary": "Start a workout session",
+                "parameters": [
+                    {
+                        "description": "Session details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.StartSessionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/internal_kinetria_gateways_http.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_kinetria_gateways_http.StartSessionResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Active session already exists",
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/sessions/{sessionId}/abandon": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mark a workout session as abandoned",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sessions"
+                ],
+                "summary": "Abandon a workout session",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Abandon notes",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.AbandonSessionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/internal_kinetria_gateways_http.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_kinetria_gateways_http.SessionStatusResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/sessions/{sessionId}/finish": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mark a workout session as completed",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sessions"
+                ],
+                "summary": "Finish a workout session",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Finish notes",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.FinishSessionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/internal_kinetria_gateways_http.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_kinetria_gateways_http.SessionStatusResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/sessions/{sessionId}/sets": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Record a completed or skipped set for an exercise",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sessions"
+                ],
+                "summary": "Record a set",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Set details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.RecordSetRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/internal_kinetria_gateways_http.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_kinetria_gateways_http.RecordSetResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/workouts": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get paginated list of user's workouts",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "workouts"
+                ],
+                "summary": "List user workouts",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Items per page",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/internal_kinetria_gateways_http.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_kinetria_gateways_http.WorkoutListResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/health": {
+            "get": {
+                "description": "Check if the service is running",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "health"
+                ],
+                "summary": "Health check",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http_health.HealthResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "internal_kinetria_gateways_http.AbandonSessionRequest": {
+            "type": "object",
+            "properties": {
+                "notes": {
+                    "type": "string",
+                    "example": "Precisei sair mais cedo"
+                }
+            }
+        },
+        "internal_kinetria_gateways_http.AuthResponse": {
+            "type": "object",
+            "properties": {
+                "accessToken": {
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                },
+                "expiresIn": {
+                    "type": "integer",
+                    "example": 3600
+                },
+                "refreshToken": {
+                    "type": "string",
+                    "example": "abc123def456..."
+                }
+            }
+        },
+        "internal_kinetria_gateways_http.DashboardResponse": {
+            "type": "object",
+            "properties": {
+                "stats": {
+                    "$ref": "#/definitions/internal_kinetria_gateways_http.WeekStats"
+                },
+                "todayWorkout": {
+                    "$ref": "#/definitions/internal_kinetria_gateways_http.TodayWorkout"
+                },
+                "user": {
+                    "$ref": "#/definitions/internal_kinetria_gateways_http.DashboardUser"
+                },
+                "weekProgress": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_kinetria_gateways_http.DayProgress"
+                    }
+                }
+            }
+        },
+        "internal_kinetria_gateways_http.DashboardUser": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "bruno@example.com"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "b67a784a-e54b-4330-9b6b-8dd930c4a746"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Bruno Costa"
+                },
+                "profileImageUrl": {
+                    "type": "string",
+                    "example": "/assets/avatars/default.png"
+                }
+            }
+        },
+        "internal_kinetria_gateways_http.DayProgress": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "type": "string",
+                    "example": "2026-02-25"
+                },
+                "day": {
+                    "type": "string",
+                    "example": "Q"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "completed",
+                        "missed",
+                        "future"
+                    ],
+                    "example": "completed"
+                }
+            }
+        },
+        "internal_kinetria_gateways_http.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "VALIDATION_ERROR"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Invalid request body"
+                }
+            }
+        },
+        "internal_kinetria_gateways_http.FinishSessionRequest": {
+            "type": "object",
+            "properties": {
+                "notes": {
+                    "type": "string",
+                    "example": "Treino completo! Ótima performance."
+                }
+            }
+        },
+        "internal_kinetria_gateways_http.LoginRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "bruno@example.com"
+                },
+                "password": {
+                    "type": "string",
+                    "example": "Password123!"
+                }
+            }
+        },
+        "internal_kinetria_gateways_http.LogoutRequest": {
+            "type": "object",
+            "required": [
+                "refreshToken"
+            ],
+            "properties": {
+                "refreshToken": {
+                    "type": "string",
+                    "example": "abc123def456..."
+                }
+            }
+        },
+        "internal_kinetria_gateways_http.MessageResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "Logged out successfully"
+                }
+            }
+        },
+        "internal_kinetria_gateways_http.PaginationMeta": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "page": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 25
+                },
+                "totalPages": {
+                    "type": "integer",
+                    "example": 3
+                }
+            }
+        },
+        "internal_kinetria_gateways_http.RecordSetRequest": {
+            "type": "object",
+            "required": [
+                "exerciseId",
+                "reps",
+                "setNumber",
+                "status"
+            ],
+            "properties": {
+                "exerciseId": {
+                    "type": "string",
+                    "example": "e1f2g3h4-i5j6-7890-abcd-ef1234567890"
+                },
+                "reps": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "example": 12
+                },
+                "setNumber": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "example": 1
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "completed",
+                        "skipped"
+                    ],
+                    "example": "completed"
+                },
+                "weight": {
+                    "type": "number",
+                    "minimum": 0,
+                    "example": 80.5
+                }
+            }
+        },
+        "internal_kinetria_gateways_http.RecordSetResponse": {
+            "type": "object",
+            "properties": {
+                "exerciseId": {
+                    "type": "string",
+                    "example": "e1f2g3h4-i5j6-7890-abcd-ef1234567890"
+                },
+                "reps": {
+                    "type": "integer",
+                    "example": 12
+                },
+                "setNumber": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "setRecordId": {
+                    "type": "string",
+                    "example": "s1t2u3v4-w5x6-7890-abcd-ef1234567890"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "completed"
+                },
+                "weight": {
+                    "type": "number",
+                    "example": 80.5
+                }
+            }
+        },
+        "internal_kinetria_gateways_http.RefreshResponse": {
+            "type": "object",
+            "properties": {
+                "accessToken": {
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                },
+                "expiresIn": {
+                    "type": "integer",
+                    "example": 3600
+                }
+            }
+        },
+        "internal_kinetria_gateways_http.RefreshTokenRequest": {
+            "type": "object",
+            "required": [
+                "refreshToken"
+            ],
+            "properties": {
+                "refreshToken": {
+                    "type": "string",
+                    "example": "abc123def456..."
+                }
+            }
+        },
+        "internal_kinetria_gateways_http.RegisterRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "name",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "bruno@example.com"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Bruno Costa"
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 8,
+                    "example": "Password123!"
+                }
+            }
+        },
+        "internal_kinetria_gateways_http.SessionStatusResponse": {
+            "type": "object",
+            "properties": {
+                "finishedAt": {
+                    "type": "string",
+                    "example": "2026-02-25T16:15:00Z"
+                },
+                "sessionId": {
+                    "type": "string",
+                    "example": "f1e2d3c4-b5a6-7890-1234-567890abcdef"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "completed"
+                }
+            }
+        },
+        "internal_kinetria_gateways_http.StartSessionRequest": {
+            "type": "object",
+            "required": [
+                "workoutId"
+            ],
+            "properties": {
+                "notes": {
+                    "type": "string",
+                    "example": "Treino de peito e tríceps"
+                },
+                "workoutId": {
+                    "type": "string",
+                    "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                }
+            }
+        },
+        "internal_kinetria_gateways_http.StartSessionResponse": {
+            "type": "object",
+            "properties": {
+                "sessionId": {
+                    "type": "string",
+                    "example": "f1e2d3c4-b5a6-7890-1234-567890abcdef"
+                },
+                "startedAt": {
+                    "type": "string",
+                    "example": "2026-02-25T15:30:00Z"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "active"
+                },
+                "workoutId": {
+                    "type": "string",
+                    "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                }
+            }
+        },
+        "internal_kinetria_gateways_http.SuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {}
+            }
+        },
+        "internal_kinetria_gateways_http.TodayWorkout": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                },
+                "intensity": {
+                    "type": "string",
+                    "example": "ALTA"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Treino A - Peito e Tríceps"
+                },
+                "type": {
+                    "type": "string",
+                    "example": "HIPERTROFIA"
+                }
+            }
+        },
+        "internal_kinetria_gateways_http.WeekStats": {
+            "type": "object",
+            "properties": {
+                "calories": {
+                    "type": "integer",
+                    "example": 420
+                },
+                "totalTimeMinutes": {
+                    "type": "integer",
+                    "example": 60
+                }
+            }
+        },
+        "internal_kinetria_gateways_http.Workout": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                },
+                "intensity": {
+                    "type": "string",
+                    "example": "ALTA"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Treino A - Peito e Tríceps"
+                },
+                "type": {
+                    "type": "string",
+                    "example": "HIPERTROFIA"
+                }
+            }
+        },
+        "internal_kinetria_gateways_http.WorkoutListResponse": {
+            "type": "object",
+            "properties": {
+                "pagination": {
+                    "$ref": "#/definitions/internal_kinetria_gateways_http.PaginationMeta"
+                },
+                "workouts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_kinetria_gateways_http.Workout"
+                    }
+                }
+            }
+        },
+        "internal_kinetria_gateways_http_health.HealthResponse": {
+            "type": "object",
+            "properties": {
+                "service": {
+                    "type": "string",
+                    "example": "kinetria"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "healthy"
+                },
+                "version": {
+                    "type": "string",
+                    "example": "undefined"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "Type \"Bearer\" followed by a space and JWT token.",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
+}

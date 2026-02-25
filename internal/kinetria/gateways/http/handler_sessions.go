@@ -41,7 +41,20 @@ func NewSessionsHandler(
 	}
 }
 
-// StartSession handles POST /sessions
+// StartSession godoc
+// @Summary Start a workout session
+// @Description Start a new workout session for a specific workout
+// @Tags sessions
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body StartSessionRequest true "Session details"
+// @Success 201 {object} SuccessResponse{data=StartSessionResponse}
+// @Failure 400 {object} ErrorResponse "Active session already exists"
+// @Failure 401 {object} ErrorResponse "Unauthorized"
+// @Failure 422 {object} ErrorResponse "Validation error"
+// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Router /api/v1/sessions [post]
 func (h *SessionsHandler) StartSession(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MB limit
 
@@ -92,7 +105,21 @@ func (h *SessionsHandler) StartSession(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// RecordSet handles POST /sessions/:id/sets
+// RecordSet godoc
+// @Summary Record a set
+// @Description Record a completed or skipped set for an exercise
+// @Tags sessions
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param sessionId path string true "Session ID"
+// @Param request body RecordSetRequest true "Set details"
+// @Success 201 {object} SuccessResponse{data=RecordSetResponse}
+// @Failure 401 {object} ErrorResponse "Unauthorized"
+// @Failure 404 {object} ErrorResponse "Session not found"
+// @Failure 422 {object} ErrorResponse "Validation error"
+// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Router /api/v1/sessions/{sessionId}/sets [post]
 func (h *SessionsHandler) RecordSet(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MB limit
 
@@ -165,7 +192,20 @@ func (h *SessionsHandler) RecordSet(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// FinishSession handles PATCH /sessions/:id/finish
+// FinishSession godoc
+// @Summary Finish a workout session
+// @Description Mark a workout session as completed
+// @Tags sessions
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param sessionId path string true "Session ID"
+// @Param request body FinishSessionRequest true "Finish notes"
+// @Success 200 {object} SuccessResponse{data=SessionStatusResponse}
+// @Failure 401 {object} ErrorResponse "Unauthorized"
+// @Failure 404 {object} ErrorResponse "Session not found"
+// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Router /api/v1/sessions/{sessionId}/finish [patch]
 func (h *SessionsHandler) FinishSession(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MB limit
 
@@ -218,7 +258,20 @@ func (h *SessionsHandler) FinishSession(w http.ResponseWriter, r *http.Request) 
 	})
 }
 
-// AbandonSession handles PATCH /sessions/:id/abandon
+// AbandonSession godoc
+// @Summary Abandon a workout session
+// @Description Mark a workout session as abandoned
+// @Tags sessions
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param sessionId path string true "Session ID"
+// @Param request body AbandonSessionRequest true "Abandon notes"
+// @Success 200 {object} SuccessResponse{data=SessionStatusResponse}
+// @Failure 401 {object} ErrorResponse "Unauthorized"
+// @Failure 404 {object} ErrorResponse "Session not found"
+// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Router /api/v1/sessions/{sessionId}/abandon [patch]
 func (h *SessionsHandler) AbandonSession(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MB limit
 
