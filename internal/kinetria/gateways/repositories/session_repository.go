@@ -64,3 +64,44 @@ func (r *SessionRepository) FindActiveByUserID(ctx context.Context, userID uuid.
 		UpdatedAt:  row.UpdatedAt,
 	}, nil
 }
+
+// FindByID retrieves a session by its ID.
+func (r *SessionRepository) FindByID(ctx context.Context, sessionID uuid.UUID) (*entities.Session, error) {
+	row, err := r.q.FindSessionByID(ctx, sessionID)
+	if err != nil {
+		return nil, err
+	}
+
+	var finishedAt *time.Time
+	if row.FinishedAt.Valid {
+		finishedAt = &row.FinishedAt.Time
+	}
+
+	return &entities.Session{
+		ID:         row.ID,
+		UserID:     row.UserID,
+		WorkoutID:  row.WorkoutID,
+		Status:     vos.SessionStatus(row.Status),
+		Notes:      row.Notes,
+		StartedAt:  row.StartedAt,
+		FinishedAt: finishedAt,
+		CreatedAt:  row.CreatedAt,
+		UpdatedAt:  row.UpdatedAt,
+	}, nil
+}
+
+// UpdateStatus updates the status, finishedAt and notes of a session.
+func (r *SessionRepository) UpdateStatus(ctx context.Context, sessionID uuid.UUID, status string, finishedAt *time.Time, notes string) error {
+	var finishedAtSQL sql.NullTime
+	if finishedAt != nil {
+		finishedAtSQL = sql.NullTime{Time: *finishedAt, Valid: true}
+	}
+
+	return r.q.UpdateSessionStatus(ctx, queries.UpdateSessionStatusParams{
+		ID:         sessionID,
+		Status:     status,
+		FinishedAt: finishedAtSQL,
+		Notes:      notes,
+		UpdatedAt:  time.Now(),
+	})
+}

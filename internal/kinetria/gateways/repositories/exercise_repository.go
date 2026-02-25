@@ -1,0 +1,32 @@
+package repositories
+
+import (
+	"context"
+	"database/sql"
+
+	"github.com/google/uuid"
+	"github.com/kinetria/kinetria-back/internal/kinetria/gateways/repositories/queries"
+)
+
+// ExerciseRepository implements ports.ExerciseRepository using SQLC.
+type ExerciseRepository struct {
+	db *sql.DB
+}
+
+// NewExerciseRepository creates a new ExerciseRepository.
+func NewExerciseRepository(db *sql.DB) *ExerciseRepository {
+	return &ExerciseRepository{db: db}
+}
+
+// ExistsByIDAndWorkoutID checks if an exercise exists and belongs to a workout.
+func (r *ExerciseRepository) ExistsByIDAndWorkoutID(ctx context.Context, exerciseID, workoutID uuid.UUID) (bool, error) {
+	q := queries.New(r.db)
+	result, err := q.ExistsExerciseByIDAndWorkoutID(ctx, queries.ExistsExerciseByIDAndWorkoutIDParams{
+		ID:        exerciseID,
+		WorkoutID: workoutID,
+	})
+	if err != nil {
+		return false, err
+	}
+	return result, nil
+}
