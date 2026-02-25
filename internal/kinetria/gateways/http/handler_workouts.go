@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/entities"
 	domainworkouts "github.com/kinetria/kinetria-back/internal/kinetria/domain/workouts"
@@ -132,13 +133,19 @@ func mapWorkoutToFullDTO(w entities.Workout, exercises []entities.Exercise) Work
 // WorkoutsHandler handles HTTP requests for workouts endpoints.
 type WorkoutsHandler struct {
 	listWorkoutsUC *domainworkouts.ListWorkoutsUC
+	getWorkoutUC   *domainworkouts.GetWorkoutUC
 	jwtManager     *gatewayauth.JWTManager
 }
 
 // NewWorkoutsHandler creates a new WorkoutsHandler.
-func NewWorkoutsHandler(listWorkoutsUC *domainworkouts.ListWorkoutsUC, jwtManager *gatewayauth.JWTManager) *WorkoutsHandler {
+func NewWorkoutsHandler(
+	listWorkoutsUC *domainworkouts.ListWorkoutsUC,
+	getWorkoutUC *domainworkouts.GetWorkoutUC,
+	jwtManager *gatewayauth.JWTManager,
+) *WorkoutsHandler {
 	return &WorkoutsHandler{
 		listWorkoutsUC: listWorkoutsUC,
+		getWorkoutUC:   getWorkoutUC,
 		jwtManager:     jwtManager,
 	}
 }
@@ -205,6 +212,70 @@ func (h *WorkoutsHandler) ListWorkouts(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(resp)
+}
+
+// GetWorkout godoc
+// @Summary Get workout by ID
+// @Description Get detailed workout information with exercises
+// @Tags workouts
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Workout ID (UUID)"
+// @Success 200 {object} SuccessResponse{data=WorkoutDTO}
+// @Failure 401 {object} ErrorResponse "Unauthorized"
+// @Failure 404 {object} ErrorResponse "Workout not found"
+// @Failure 422 {object} ErrorResponse "Invalid workout ID"
+// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Router /api/v1/workouts/{id} [get]
+func (h *WorkoutsHandler) GetWorkout(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// 1. Extrair userID do JWT
+	userID, err := h.extractUserIDFromJWT(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Invalid or expired access token.")
+		return
+	}
+
+	// 2. Extrair workoutID do path parameter
+	workoutIDStr := chi.URLParam(r, "id")
+	if workoutIDStr == "" {
+		writeError(w, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "workout id is required")
+		return
+	}
+
+	workoutID, err := uuid.Parse(workoutIDStr)
+	if err != nil {
+		writeError(w, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "workoutId must be a valid UUID")
+		return
+	}
+
+	// 3. Chamar use case
+	output, err := h.getWorkoutUC.Execute(ctx, domainworkouts.GetWorkoutInput{
+		WorkoutID: workoutID,
+		UserID:    userID,
+	})
+	if err != nil {
+		// Workout not found (ou ownership fail)
+		if strings.Contains(err.Error(), "not found") {
+			writeError(w, http.StatusNotFound, "WORKOUT_NOT_FOUND",
+				fmt.Sprintf("Workout with id '%s' was not found.", workoutID.String()))
+			return
+		}
+		// Erro interno
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "An unexpected error occurred")
+		return
+	}
+
+	// 4. Mapear para DTO
+	dto := mapWorkoutToFullDTO(output.Workout, output.Exercises)
+
+	// 5. Responder com sucesso
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(ApiResponseDTO{
+		Data: dto,
+	})
 }
 
 func (h *WorkoutsHandler) extractUserIDFromJWT(r *http.Request) (uuid.UUID, error) {
