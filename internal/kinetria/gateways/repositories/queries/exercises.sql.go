@@ -7,6 +7,7 @@ package queries
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/google/uuid"
 )
@@ -27,4 +28,68 @@ func (q *Queries) ExistsExerciseByIDAndWorkoutID(ctx context.Context, arg Exists
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
+}
+
+const listExercisesByWorkoutID = `-- name: ListExercisesByWorkoutID :many
+SELECT 
+    id, 
+    workout_id, 
+    name, 
+    thumbnail_url, 
+    sets, 
+    reps, 
+    muscles, 
+    rest_time, 
+    weight, 
+    order_index
+FROM exercises
+WHERE workout_id = $1
+ORDER BY order_index ASC
+`
+
+type ListExercisesByWorkoutIDRow struct {
+	ID           uuid.UUID       `json:"id"`
+	WorkoutID    uuid.UUID       `json:"workout_id"`
+	Name         string          `json:"name"`
+	ThumbnailUrl string          `json:"thumbnail_url"`
+	Sets         int32           `json:"sets"`
+	Reps         string          `json:"reps"`
+	Muscles      json.RawMessage `json:"muscles"`
+	RestTime     int32           `json:"rest_time"`
+	Weight       int32           `json:"weight"`
+	OrderIndex   int32           `json:"order_index"`
+}
+
+func (q *Queries) ListExercisesByWorkoutID(ctx context.Context, workoutID uuid.UUID) ([]ListExercisesByWorkoutIDRow, error) {
+	rows, err := q.db.QueryContext(ctx, listExercisesByWorkoutID, workoutID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListExercisesByWorkoutIDRow
+	for rows.Next() {
+		var i ListExercisesByWorkoutIDRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkoutID,
+			&i.Name,
+			&i.ThumbnailUrl,
+			&i.Sets,
+			&i.Reps,
+			&i.Muscles,
+			&i.RestTime,
+			&i.Weight,
+			&i.OrderIndex,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

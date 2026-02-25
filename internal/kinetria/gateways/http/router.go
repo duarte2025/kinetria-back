@@ -2,8 +2,8 @@ package service
 
 import (
 	"github.com/go-chi/chi/v5"
-	httpSwagger "github.com/swaggo/http-swagger"
 	gatewayauth "github.com/kinetria/kinetria-back/internal/kinetria/gateways/auth"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 // ServiceRouter mounts all API routes for the kinetria service.
@@ -57,6 +57,7 @@ func (s ServiceRouter) Router(router chi.Router) {
 
 	// Workouts (authenticated)
 	router.With(AuthMiddleware(s.jwtManager)).Get("/workouts", s.workoutsHandler.ListWorkouts)
+	router.With(AuthMiddleware(s.jwtManager)).Get("/workouts/{id}", s.workoutsHandler.GetWorkout)
 
 	// Dashboard (authenticated)
 	router.With(AuthMiddleware(s.jwtManager)).Get("/dashboard", s.dashboardHandler.GetDashboard)

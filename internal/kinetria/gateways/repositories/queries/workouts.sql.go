@@ -78,6 +78,45 @@ func (q *Queries) GetFirstWorkoutByUserID(ctx context.Context, userID uuid.UUID)
 	return i, err
 }
 
+const getWorkoutByID = `-- name: GetWorkoutByID :one
+SELECT 
+    id, 
+    user_id, 
+    name, 
+    description, 
+    type, 
+    intensity, 
+    duration, 
+    image_url, 
+    created_at, 
+    updated_at
+FROM workouts
+WHERE id = $1 AND user_id = $2
+`
+
+type GetWorkoutByIDParams struct {
+	ID     uuid.UUID `json:"id"`
+	UserID uuid.UUID `json:"user_id"`
+}
+
+func (q *Queries) GetWorkoutByID(ctx context.Context, arg GetWorkoutByIDParams) (Workout, error) {
+	row := q.db.QueryRowContext(ctx, getWorkoutByID, arg.ID, arg.UserID)
+	var i Workout
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Name,
+		&i.Description,
+		&i.Type,
+		&i.Intensity,
+		&i.Duration,
+		&i.ImageUrl,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const listWorkoutsByUserID = `-- name: ListWorkoutsByUserID :many
 SELECT id, user_id, name, description, type, intensity, duration, image_url, created_at, updated_at
 FROM workouts
