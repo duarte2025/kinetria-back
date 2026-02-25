@@ -1,6 +1,8 @@
 package service
 
 import (
+	"context"
+	"log/slog"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -48,6 +50,10 @@ func (h *DashboardHandler) GetDashboard(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	// Cancelable context: cancels remaining goroutines on fail-fast
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	// Estrutura para coletar resultados das goroutines
 	type result struct {
 		user         *dashboard.GetUserProfileOutput
@@ -87,6 +93,11 @@ func (h *DashboardHandler) GetDashboard(w http.ResponseWriter, r *http.Request) 
 		r := <-ch
 		if r.err != nil {
 			// Fail-fast: se qualquer use case falhar, retornar erro
+			cancel()
+			slog.ErrorContext(ctx, "dashboard use case failed",
+				"source", r.source,
+				"error", r.err,
+			)
 			writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to load dashboard data")
 			return
 		}

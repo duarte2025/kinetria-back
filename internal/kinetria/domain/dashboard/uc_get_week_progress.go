@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/ports"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type GetWeekProgressInput struct {
@@ -23,14 +24,18 @@ type GetWeekProgressOutput struct {
 }
 
 type GetWeekProgressUC struct {
+	tracer      trace.Tracer
 	sessionRepo ports.SessionRepository
 }
 
-func NewGetWeekProgressUC(sessionRepo ports.SessionRepository) *GetWeekProgressUC {
-	return &GetWeekProgressUC{sessionRepo: sessionRepo}
+func NewGetWeekProgressUC(tracer trace.Tracer, sessionRepo ports.SessionRepository) *GetWeekProgressUC {
+	return &GetWeekProgressUC{tracer: tracer, sessionRepo: sessionRepo}
 }
 
 func (uc *GetWeekProgressUC) Execute(ctx context.Context, input GetWeekProgressInput) (*GetWeekProgressOutput, error) {
+	ctx, span := uc.tracer.Start(ctx, "GetWeekProgressUC")
+	defer span.End()
+
 	now := time.Now().UTC()
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
 	startDate := today.AddDate(0, 0, -6) // 6 dias atrás
