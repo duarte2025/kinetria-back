@@ -7,10 +7,11 @@ import (
 
 // ServiceRouter mounts all API routes for the kinetria service.
 type ServiceRouter struct {
-	authHandler     *AuthHandler
-	sessionsHandler *SessionsHandler
-	workoutsHandler *WorkoutsHandler
-	jwtManager      *gatewayauth.JWTManager
+	authHandler      *AuthHandler
+	sessionsHandler  *SessionsHandler
+	workoutsHandler  *WorkoutsHandler
+	dashboardHandler *DashboardHandler
+	jwtManager       *gatewayauth.JWTManager
 }
 
 // NewServiceRouter creates a new ServiceRouter with the provided handlers.
@@ -18,13 +19,15 @@ func NewServiceRouter(
 	authHandler *AuthHandler,
 	sessionsHandler *SessionsHandler,
 	workoutsHandler *WorkoutsHandler,
+	dashboardHandler *DashboardHandler,
 	jwtManager *gatewayauth.JWTManager,
 ) ServiceRouter {
 	return ServiceRouter{
-		authHandler:     authHandler,
-		sessionsHandler: sessionsHandler,
-		workoutsHandler: workoutsHandler,
-		jwtManager:      jwtManager,
+		authHandler:      authHandler,
+		sessionsHandler:  sessionsHandler,
+		workoutsHandler:  workoutsHandler,
+		dashboardHandler: dashboardHandler,
+		jwtManager:       jwtManager,
 	}
 }
 
@@ -49,5 +52,8 @@ func (s ServiceRouter) Router(router chi.Router) {
 	router.With(AuthMiddleware(s.jwtManager)).Patch("/sessions/{sessionId}/abandon", s.sessionsHandler.AbandonSession)
 
 	// Workouts (authenticated)
-	router.Get("/workouts", s.workoutsHandler.ListWorkouts)
+	router.With(AuthMiddleware(s.jwtManager)).Get("/workouts", s.workoutsHandler.ListWorkouts)
+
+	// Dashboard (authenticated)
+	router.With(AuthMiddleware(s.jwtManager)).Get("/dashboard", s.dashboardHandler.GetDashboard)
 }

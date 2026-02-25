@@ -6,6 +6,7 @@ import (
 	"go.uber.org/fx"
 
 	domainauth "github.com/kinetria/kinetria-back/internal/kinetria/domain/auth"
+	domaindashboard "github.com/kinetria/kinetria-back/internal/kinetria/domain/dashboard"
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/ports"
 	domainsessions "github.com/kinetria/kinetria-back/internal/kinetria/domain/sessions"
 	domainworkouts "github.com/kinetria/kinetria-back/internal/kinetria/domain/workouts"
@@ -91,12 +92,19 @@ func main() {
 			domainsessions.NewAbandonSessionUseCase,
 			domainworkouts.NewListWorkoutsUC,
 
+			// Dashboard use cases
+			domaindashboard.NewGetUserProfileUC,
+			domaindashboard.NewGetTodayWorkoutUC,
+			domaindashboard.NewGetWeekProgressUC,
+			domaindashboard.NewGetWeekStatsUC,
+
 			// Validator and HTTP
 			validator.New,
 			healthhandler.NewHealthHandler,
 			httpgateway.NewAuthHandler,
 			httpgateway.NewSessionsHandler,
 			httpgateway.NewWorkoutsHandler,
+			httpgateway.NewDashboardHandler,
 			httpgateway.NewServiceRouter,
 			chi.NewRouter,
 		),
