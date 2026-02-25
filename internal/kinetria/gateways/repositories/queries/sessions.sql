@@ -17,3 +17,21 @@ WHERE id = $1;
 UPDATE sessions
 SET status = $2, finished_at = $3, notes = $4, updated_at = $5
 WHERE id = $1 AND status = 'active';
+
+-- name: GetCompletedSessionsByDateRange :many
+SELECT 
+    id, 
+    user_id, 
+    workout_id, 
+    status, 
+    notes,
+    started_at, 
+    finished_at, 
+    created_at, 
+    updated_at
+FROM sessions
+WHERE user_id = $1
+  AND status = 'completed'
+  AND DATE(started_at) BETWEEN $2 AND $3
+ORDER BY started_at DESC;
+
