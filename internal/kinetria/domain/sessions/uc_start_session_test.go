@@ -38,8 +38,8 @@ func (m *mockSessionRepository) FindByID(ctx context.Context, sessionID uuid.UUI
 	return nil, nil
 }
 
-func (m *mockSessionRepository) UpdateStatus(ctx context.Context, sessionID uuid.UUID, status string, finishedAt *time.Time, notes string) error {
-	return nil
+func (m *mockSessionRepository) UpdateStatus(ctx context.Context, sessionID uuid.UUID, status string, finishedAt *time.Time, notes string) (bool, error) {
+	return true, nil
 }
 
 // mockWorkoutRepository is a mock implementation of ports.WorkoutRepository for testing.

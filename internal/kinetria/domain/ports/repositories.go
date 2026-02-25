@@ -29,7 +29,7 @@ type SessionRepository interface {
 	Create(ctx context.Context, session *entities.Session) error
 	FindActiveByUserID(ctx context.Context, userID uuid.UUID) (*entities.Session, error)
 	FindByID(ctx context.Context, sessionID uuid.UUID) (*entities.Session, error)
-	UpdateStatus(ctx context.Context, sessionID uuid.UUID, status string, finishedAt *time.Time, notes string) error
+	UpdateStatus(ctx context.Context, sessionID uuid.UUID, status string, finishedAt *time.Time, notes string) (bool, error)
 }
 
 // SetRecordRepository defines persistence operations for set records.

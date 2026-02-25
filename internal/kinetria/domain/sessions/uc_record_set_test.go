@@ -204,8 +204,8 @@ func (m *mockSessionRepo) FindByID(ctx context.Context, sessionID uuid.UUID) (*e
 	return nil, nil
 }
 
-func (m *mockSessionRepo) UpdateStatus(ctx context.Context, sessionID uuid.UUID, status string, finishedAt *time.Time, notes string) error {
-	return nil
+func (m *mockSessionRepo) UpdateStatus(ctx context.Context, sessionID uuid.UUID, status string, finishedAt *time.Time, notes string) (bool, error) {
+	return true, nil
 }
 
 type mockSetRecordRepo struct {

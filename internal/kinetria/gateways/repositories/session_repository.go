@@ -91,17 +91,22 @@ func (r *SessionRepository) FindByID(ctx context.Context, sessionID uuid.UUID) (
 }
 
 // UpdateStatus updates the status, finishedAt and notes of a session.
-func (r *SessionRepository) UpdateStatus(ctx context.Context, sessionID uuid.UUID, status string, finishedAt *time.Time, notes string) error {
+// Returns (true, nil) if the session was updated, (false, nil) if the session was not active.
+func (r *SessionRepository) UpdateStatus(ctx context.Context, sessionID uuid.UUID, status string, finishedAt *time.Time, notes string) (bool, error) {
 	var finishedAtSQL sql.NullTime
 	if finishedAt != nil {
 		finishedAtSQL = sql.NullTime{Time: *finishedAt, Valid: true}
 	}
 
-	return r.q.UpdateSessionStatus(ctx, queries.UpdateSessionStatusParams{
+	rowsAffected, err := r.q.UpdateSessionStatus(ctx, queries.UpdateSessionStatusParams{
 		ID:         sessionID,
 		Status:     status,
 		FinishedAt: finishedAtSQL,
 		Notes:      notes,
 		UpdatedAt:  time.Now(),
 	})
+	if err != nil {
+		return false, err
+	}
+	return rowsAffected > 0, nil
 }
