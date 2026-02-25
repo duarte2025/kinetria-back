@@ -3,7 +3,6 @@ package service
 import (
 	"encoding/json"
 	"errors"
-	"math"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -110,11 +109,11 @@ func (h *SessionsHandler) RecordSet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		ExerciseID string  `json:"exerciseId"`
-		SetNumber  int     `json:"setNumber"`
-		Weight     float64 `json:"weight"`
-		Reps       int     `json:"reps"`
-		Status     string  `json:"status"`
+		ExerciseID string `json:"exerciseId"`
+		SetNumber  int    `json:"setNumber"`
+		Weight     int    `json:"weight"` // grams
+		Reps       int    `json:"reps"`
+		Status     string `json:"status"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Request body is invalid.")
@@ -132,7 +131,7 @@ func (h *SessionsHandler) RecordSet(w http.ResponseWriter, r *http.Request) {
 		SessionID:  sessionID,
 		ExerciseID: exerciseID,
 		SetNumber:  req.SetNumber,
-		Weight:     int(math.Round(req.Weight * 1000)), // kg to grams, rounded
+		Weight:     req.Weight,
 		Reps:       req.Reps,
 		Status:     vos.SetRecordStatus(req.Status),
 	})
