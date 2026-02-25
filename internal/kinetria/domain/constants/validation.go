@@ -7,6 +7,6 @@ MaxDescriptionLength = 500   // for Workout.Description
 MaxNotesLength       = 1000  // for Session.Notes
 MinSetNumber         = 1
 MaxSetNumber         = 20
-MaxWeight            = 500_000 // grams (500kg)
+MaxWeight            = 500_000 // grams
 MaxReps              = 100
 )

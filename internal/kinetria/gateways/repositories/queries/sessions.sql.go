@@ -78,3 +78,66 @@ func (q *Queries) FindActiveSessionByUserID(ctx context.Context, userID uuid.UUI
 	)
 	return i, err
 }
+
+const findSessionByID = `-- name: FindSessionByID :one
+SELECT id, user_id, workout_id, started_at, finished_at, status, notes, created_at, updated_at
+FROM sessions
+WHERE id = $1
+`
+
+type FindSessionByIDRow struct {
+	ID         uuid.UUID    `json:"id"`
+	UserID     uuid.UUID    `json:"user_id"`
+	WorkoutID  uuid.UUID    `json:"workout_id"`
+	StartedAt  time.Time    `json:"started_at"`
+	FinishedAt sql.NullTime `json:"finished_at"`
+	Status     string       `json:"status"`
+	Notes      string       `json:"notes"`
+	CreatedAt  time.Time    `json:"created_at"`
+	UpdatedAt  time.Time    `json:"updated_at"`
+}
+
+func (q *Queries) FindSessionByID(ctx context.Context, id uuid.UUID) (FindSessionByIDRow, error) {
+	row := q.db.QueryRowContext(ctx, findSessionByID, id)
+	var i FindSessionByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.WorkoutID,
+		&i.StartedAt,
+		&i.FinishedAt,
+		&i.Status,
+		&i.Notes,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateSessionStatus = `-- name: UpdateSessionStatus :execrows
+UPDATE sessions
+SET status = $2, finished_at = $3, notes = $4, updated_at = $5
+WHERE id = $1 AND status = 'active'
+`
+
+type UpdateSessionStatusParams struct {
+	ID         uuid.UUID    `json:"id"`
+	Status     string       `json:"status"`
+	FinishedAt sql.NullTime `json:"finished_at"`
+	Notes      string       `json:"notes"`
+	UpdatedAt  time.Time    `json:"updated_at"`
+}
+
+func (q *Queries) UpdateSessionStatus(ctx context.Context, arg UpdateSessionStatusParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateSessionStatus,
+		arg.ID,
+		arg.Status,
+		arg.FinishedAt,
+		arg.Notes,
+		arg.UpdatedAt,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}

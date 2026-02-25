@@ -390,9 +390,9 @@ log.Info().
 - [x] POST /auth/login
 - [x] POST /auth/refresh
 - [x] POST /auth/logout
-- [ ] GET /workouts
+- [x] GET /workouts
 - [ ] GET /workouts/:id
-- [ ] POST /sessions
+- [x] POST /sessions
 - [ ] POST /sessions/:id/sets
 - [ ] PATCH /sessions/:id/finish
 - [ ] PATCH /sessions/:id/abandon
@@ -408,26 +408,26 @@ log.Info().
 - [x] Migration: refresh_tokens
 - [x] Migration: audit_log
 - [x] Docker Compose (PostgreSQL)
-- [ ] Seed data (workouts)
+- [x] Seed data (workouts)
 - [ ] Rate limiting
 - [x] JWT middleware
-- [ ] Audit log em mutações
+- [x] Audit log em mutações (sessions)
 - [ ] Logs estruturados (zerolog)
 - [ ] Métricas Prometheus
 - [x] Healthcheck /health
-- [ ] Testes cobertura > 70%
+- [x] Testes cobertura > 70% (domain layer)
 
 ### Produção
 
 - [x] Migrations aplicadas com sucesso
 - [ ] Índices criados: `user_id`, `workout_id`, `session_id`, `(user_id, occurred_at)` em audit_log
-- [ ] Constraints: UNIQUE, FK, CHECK configurados
+- [x] Constraints: UNIQUE, FK, CHECK configurados
 - [ ] JWT_SECRET via secrets manager
 - [ ] Rate limiting habilitado
 - [ ] Logs sem PII
 - [ ] Métricas exportadas para Prometheus
 - [x] Healthcheck `/health` respondendo
-- [ ] Testes cobertura > 70%
+- [x] Testes cobertura > 70% (domain layer)
 - [ ] Teste de carga: 100 req/s por 1 min sem erro
 - [ ] Rollback plan documentado
 

@@ -44,6 +44,9 @@ func (s ServiceRouter) Router(router chi.Router) {
 
 	// Protected routes
 	router.With(AuthMiddleware(s.jwtManager)).Post("/sessions", s.sessionsHandler.StartSession)
+	router.With(AuthMiddleware(s.jwtManager)).Post("/sessions/{sessionId}/sets", s.sessionsHandler.RecordSet)
+	router.With(AuthMiddleware(s.jwtManager)).Patch("/sessions/{sessionId}/finish", s.sessionsHandler.FinishSession)
+	router.With(AuthMiddleware(s.jwtManager)).Patch("/sessions/{sessionId}/abandon", s.sessionsHandler.AbandonSession)
 
 	// Workouts (authenticated)
 	router.Get("/workouts", s.workoutsHandler.ListWorkouts)
