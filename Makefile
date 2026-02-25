@@ -42,3 +42,7 @@ deps: ## Instala as dependências
 .PHONY: swagger
 swagger: ## Gera documentação Swagger/OpenAPI
 	swag init -g cmd/kinetria/api/main.go -o docs --parseDependency --parseInternal
+
+.PHONY: seed
+seed: ## Popula o banco de dados com dados de teste
+	docker exec -i kinetria-postgres psql -U kinetria -d kinetria < scripts/seed.sql
