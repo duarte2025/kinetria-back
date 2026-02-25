@@ -154,6 +154,131 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 Ver documentação completa em `internal/kinetria/domain/dashboard/README.md`.
 
+### Workouts
+
+Gerenciar e consultar planos de treino do usuário.
+
+#### GET /api/v1/workouts
+
+Lista todos os workouts do usuário autenticado com paginação.
+
+**Autenticação**: Obrigatória (JWT Bearer)
+
+**Query Parameters**:
+- `page` (int, opcional, default: 1, min: 1) - Número da página
+- `pageSize` (int, opcional, default: 20, min: 1, max: 100) - Itens por página
+
+**Exemplo de Requisição**:
+```bash
+curl -X GET "http://localhost:8080/api/v1/workouts?page=1&pageSize=10" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Exemplo de Resposta (200 OK)**:
+```json
+{
+  "data": [
+    {
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Treino de Peito e Tríceps",
+      "description": "Foco em hipertrofia com exercícios compostos",
+      "type": "FORÇA",
+      "intensity": "Alta",
+      "duration": 45,
+      "imageUrl": "https://cdn.kinetria.app/workouts/chest.jpg"
+    },
+    {
+      "id": "b2c3d4e5-f6g7-8901-bcde-f12345678901",
+      "name": "Treino de Costas",
+      "description": null,
+      "type": "HIPERTROFIA",
+      "intensity": "Moderada",
+      "duration": 60,
+      "imageUrl": null
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "pageSize": 10,
+    "total": 25,
+    "totalPages": 3
+  }
+}
+```
+
+**Possíveis Erros**:
+- `401 Unauthorized` - Token JWT inválido ou ausente
+- `422 Validation Error` - Parâmetros de paginação inválidos
+- `500 Internal Error` - Erro interno do servidor
+
+---
+
+#### GET /api/v1/workouts/{id}
+
+Retorna detalhes de um workout específico com seus exercises.
+
+**Autenticação**: Obrigatória (JWT Bearer)
+
+**Path Parameters**:
+- `id` (uuid, obrigatório) - ID do workout
+
+**Exemplo de Requisição**:
+```bash
+curl -X GET "http://localhost:8080/api/v1/workouts/a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Exemplo de Resposta (200 OK)**:
+```json
+{
+  "data": {
+    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "name": "Treino de Peito e Tríceps",
+    "description": "Foco em hipertrofia com exercícios compostos",
+    "type": "FORÇA",
+    "intensity": "Alta",
+    "duration": 45,
+    "imageUrl": "https://cdn.kinetria.app/workouts/chest.jpg",
+    "exercises": [
+      {
+        "id": "ex-uuid-1",
+        "name": "Supino Reto",
+        "thumbnailUrl": "https://cdn.kinetria.app/exercises/bench-press.jpg",
+        "sets": 4,
+        "reps": "8-12",
+        "muscles": ["Peito", "Tríceps", "Ombro"],
+        "restTime": 90,
+        "weight": 80000
+      },
+      {
+        "id": "ex-uuid-2",
+        "name": "Tríceps na Polia",
+        "thumbnailUrl": "https://cdn.kinetria.app/exercises/tricep-pushdown.jpg",
+        "sets": 3,
+        "reps": "12-15",
+        "muscles": ["Tríceps"],
+        "restTime": 60,
+        "weight": 40000
+      }
+    ]
+  }
+}
+```
+
+**Possíveis Erros**:
+- `401 Unauthorized` - Token JWT inválido ou ausente
+- `404 Not Found` - Workout não encontrado ou não pertence ao usuário
+- `422 Validation Error` - ID inválido (não é UUID)
+- `500 Internal Error` - Erro interno do servidor
+
+**Notas**:
+- `weight` é retornado em gramas (ex: 80000g = 80kg)
+- Campos opcionais podem ser `null` (ex: `description`, `imageUrl`, `thumbnailUrl`, `weight`)
+- `exercises` pode ser array vazio se o workout não tiver exercises cadastrados
+- `reps` pode ser um número fixo ou range (ex: "8-12")
+- `muscles` é uma lista de strings com os músculos trabalhados
+- `restTime` é o tempo de descanso recomendado em segundos
+
 ## Testes
 
 ```bash
