@@ -23,4 +23,8 @@ type WorkoutRepository interface {
 	//   - total count of workouts for the user
 	//   - error if query fails
 	ListByUserID(ctx context.Context, userID uuid.UUID, offset, limit int) ([]entities.Workout, int, error)
+
+	// GetFirstByUserID retorna o primeiro workout do usuário (ordenado por created_at ASC).
+	// Retorna nil se o usuário não tiver workouts.
+	GetFirstByUserID(ctx context.Context, userID uuid.UUID) (*entities.Workout, error)
 }

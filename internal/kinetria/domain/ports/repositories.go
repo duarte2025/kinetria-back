@@ -30,6 +30,15 @@ type SessionRepository interface {
 	FindActiveByUserID(ctx context.Context, userID uuid.UUID) (*entities.Session, error)
 	FindByID(ctx context.Context, sessionID uuid.UUID) (*entities.Session, error)
 	UpdateStatus(ctx context.Context, sessionID uuid.UUID, status string, finishedAt *time.Time, notes string) (bool, error)
+	// GetCompletedSessionsByUserAndDateRange retorna todas as sessões completed do usuário
+	// no intervalo de datas (inclusive).
+	// Datas devem estar em UTC. Usa DATE(started_at) para determinar o dia.
+	GetCompletedSessionsByUserAndDateRange(
+		ctx context.Context,
+		userID uuid.UUID,
+		startDate time.Time,
+		endDate time.Time,
+	) ([]entities.Session, error)
 }
 
 // SetRecordRepository defines persistence operations for set records.
