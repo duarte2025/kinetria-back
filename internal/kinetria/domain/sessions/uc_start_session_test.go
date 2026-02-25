@@ -42,6 +42,10 @@ func (m *mockSessionRepository) UpdateStatus(ctx context.Context, sessionID uuid
 	return true, nil
 }
 
+func (m *mockSessionRepository) GetCompletedSessionsByUserAndDateRange(_ context.Context, _ uuid.UUID, _, _ time.Time) ([]entities.Session, error) {
+	return nil, nil
+}
+
 // mockWorkoutRepository is a mock implementation of ports.WorkoutRepository for testing.
 type mockWorkoutRepository struct {
 	existsResponse bool
@@ -57,10 +61,6 @@ func (m *mockWorkoutRepository) ExistsByIDAndUserID(ctx context.Context, workout
 
 func (m *mockWorkoutRepository) ListByUserID(_ context.Context, _ uuid.UUID, _, _ int) ([]entities.Workout, int, error) {
 	return nil, 0, nil
-}
-
-func (m *mockWorkoutRepository) GetByID(_ context.Context, _, _ uuid.UUID) (*entities.Workout, []entities.Exercise, error) {
-	return nil, nil, nil
 }
 
 func (m *mockWorkoutRepository) GetFirstByUserID(_ context.Context, _ uuid.UUID) (*entities.Workout, error) {

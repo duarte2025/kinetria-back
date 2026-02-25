@@ -3,6 +3,8 @@ package main
 import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/fx"
 
 	_ "github.com/kinetria/kinetria-back/docs"
@@ -49,6 +51,11 @@ func main() {
 	fx.New(
 		fx.Provide(
 			config.ParseConfigFromEnv,
+
+			// Tracer (uses global OTel tracer provider; defaults to noop if not configured)
+			func() trace.Tracer {
+				return otel.Tracer("kinetria")
+			},
 
 			// Database
 			repositories.NewDatabasePool,

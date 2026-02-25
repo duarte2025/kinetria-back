@@ -187,3 +187,7 @@ func (m *mockFinishSessionRepo) UpdateStatus(ctx context.Context, sessionID uuid
 	}
 	return true, nil
 }
+
+func (m *mockFinishSessionRepo) GetCompletedSessionsByUserAndDateRange(_ context.Context, _ uuid.UUID, _, _ time.Time) ([]entities.Session, error) {
+	return nil, nil
+}

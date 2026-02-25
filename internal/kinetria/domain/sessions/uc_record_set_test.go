@@ -208,6 +208,10 @@ func (m *mockSessionRepo) UpdateStatus(ctx context.Context, sessionID uuid.UUID,
 	return true, nil
 }
 
+func (m *mockSessionRepo) GetCompletedSessionsByUserAndDateRange(_ context.Context, _ uuid.UUID, _, _ time.Time) ([]entities.Session, error) {
+	return nil, nil
+}
+
 type mockSetRecordRepo struct {
 	create                   func(context.Context, *entities.SetRecord) error
 	findBySessionExerciseSet func(context.Context, uuid.UUID, uuid.UUID, int) (*entities.SetRecord, error)
