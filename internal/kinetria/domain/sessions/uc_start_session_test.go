@@ -59,6 +59,14 @@ func (m *mockWorkoutRepository) ListByUserID(_ context.Context, _ uuid.UUID, _, 
 	return nil, 0, nil
 }
 
+func (m *mockWorkoutRepository) GetByID(_ context.Context, _, _ uuid.UUID) (*entities.Workout, []entities.Exercise, error) {
+	return nil, nil, nil
+}
+
+func (m *mockWorkoutRepository) GetFirstByUserID(_ context.Context, _ uuid.UUID) (*entities.Workout, error) {
+	return nil, nil
+}
+
 // mockAuditLogRepository is a mock implementation of ports.AuditLogRepository for testing.
 type mockAuditLogRepository struct {
 	appendErr    error
@@ -91,7 +99,7 @@ func TestStartSessionUC_Execute(t *testing.T) {
 				WorkoutID: workoutID,
 			},
 			setupMocks: func(sr *mockSessionRepository, wr *mockWorkoutRepository, ar *mockAuditLogRepository) {
-				wr.existsResponse = true // workout exists
+				wr.existsResponse = true    // workout exists
 				sr.findActiveResponse = nil // no active session
 			},
 			wantErr: nil,
