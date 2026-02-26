@@ -696,6 +696,76 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/workouts/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get detailed workout information with exercises",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "workouts"
+                ],
+                "summary": "Get workout by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workout ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/internal_kinetria_gateways_http.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_kinetria_gateways_http.WorkoutDTO"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Workout not found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid workout ID",
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_kinetria_gateways_http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/health": {
             "get": {
                 "description": "Check if the service is running",
@@ -817,6 +887,38 @@ const docTemplate = `{
                 "message": {
                     "type": "string",
                     "example": "Invalid request body"
+                }
+            }
+        },
+        "internal_kinetria_gateways_http.ExerciseDTO": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "muscles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                },
+                "reps": {
+                    "type": "string"
+                },
+                "restTime": {
+                    "type": "integer"
+                },
+                "sets": {
+                    "type": "integer"
+                },
+                "thumbnailUrl": {
+                    "type": "string"
+                },
+                "weight": {
+                    "type": "integer"
                 }
             }
         },
@@ -1115,6 +1217,38 @@ const docTemplate = `{
                 "type": {
                     "type": "string",
                     "example": "HIPERTROFIA"
+                }
+            }
+        },
+        "internal_kinetria_gateways_http.WorkoutDTO": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "duration": {
+                    "type": "integer"
+                },
+                "exercises": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_kinetria_gateways_http.ExerciseDTO"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "imageUrl": {
+                    "type": "string"
+                },
+                "intensity": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
                 }
             }
         },
