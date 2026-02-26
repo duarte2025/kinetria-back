@@ -122,12 +122,6 @@ func main() {
 			domainworkouts.NewListWorkoutsUC,
 			domainworkouts.NewGetWorkoutUC,
 
-			// Dashboard use cases
-			domaindashboard.NewGetUserProfileUC,
-			domaindashboard.NewGetTodayWorkoutUC,
-			domaindashboard.NewGetWeekProgressUC,
-			domaindashboard.NewGetWeekStatsUC,
-
 			// Validator and HTTP
 			validator.New,
 			healthhandler.NewHealthHandler,
