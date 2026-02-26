@@ -10,7 +10,7 @@ import (
 
 // mockUserRepository is a mock implementation of ports.UserRepository for testing.
 type mockUserRepository struct {
-	user     *entities.User
+	user       *entities.User
 	getByIDErr error
 }
 
@@ -31,8 +31,8 @@ func (m *mockUserRepository) GetByID(_ context.Context, _ uuid.UUID) (*entities.
 
 // mockWorkoutRepository is a mock implementation of ports.WorkoutRepository for testing.
 type mockWorkoutRepository struct {
-	firstWorkout       *entities.Workout
-	getFirstByUserErr  error
+	firstWorkout      *entities.Workout
+	getFirstByUserErr error
 }
 
 func (m *mockWorkoutRepository) ExistsByIDAndUserID(_ context.Context, _, _ uuid.UUID) (bool, error) {
@@ -48,6 +48,10 @@ func (m *mockWorkoutRepository) GetFirstByUserID(_ context.Context, _ uuid.UUID)
 		return nil, m.getFirstByUserErr
 	}
 	return m.firstWorkout, nil
+}
+
+func (m *mockWorkoutRepository) GetByID(_ context.Context, _, _ uuid.UUID) (*entities.Workout, []entities.Exercise, error) {
+	return nil, nil, nil
 }
 
 // mockSessionRepository is a mock implementation of ports.SessionRepository for testing.

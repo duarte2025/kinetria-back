@@ -32,6 +32,10 @@ func (m *mockWorkoutRepo) GetFirstByUserID(_ context.Context, _ uuid.UUID) (*ent
 	return nil, nil
 }
 
+func (m *mockWorkoutRepo) GetByID(_ context.Context, _, _ uuid.UUID) (*entities.Workout, []entities.Exercise, error) {
+	return nil, nil, nil
+}
+
 func TestListWorkoutsUC_Execute(t *testing.T) {
 	validUserID := uuid.New()
 	now := time.Now()

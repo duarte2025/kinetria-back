@@ -67,6 +67,10 @@ func (m *mockWorkoutRepository) GetFirstByUserID(_ context.Context, _ uuid.UUID)
 	return nil, nil
 }
 
+func (m *mockWorkoutRepository) GetByID(_ context.Context, _, _ uuid.UUID) (*entities.Workout, []entities.Exercise, error) {
+	return nil, nil, nil
+}
+
 // mockAuditLogRepository is a mock implementation of ports.AuditLogRepository for testing.
 type mockAuditLogRepository struct {
 	appendErr    error
