@@ -71,6 +71,27 @@ definitions:
         example: Invalid request body
         type: string
     type: object
+  internal_kinetria_gateways_http.ExerciseDTO:
+    properties:
+      id:
+        type: string
+      muscles:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+      reps:
+        type: string
+      restTime:
+        type: integer
+      sets:
+        type: integer
+      thumbnailUrl:
+        type: string
+      weight:
+        type: integer
+    type: object
   internal_kinetria_gateways_http.FinishSessionRequest:
     properties:
       notes:
@@ -281,6 +302,27 @@ definitions:
         type: string
       type:
         example: HIPERTROFIA
+        type: string
+    type: object
+  internal_kinetria_gateways_http.WorkoutDTO:
+    properties:
+      description:
+        type: string
+      duration:
+        type: integer
+      exercises:
+        items:
+          $ref: '#/definitions/internal_kinetria_gateways_http.ExerciseDTO'
+        type: array
+      id:
+        type: string
+      imageUrl:
+        type: string
+      intensity:
+        type: string
+      name:
+        type: string
+      type:
         type: string
     type: object
   internal_kinetria_gateways_http.WorkoutListResponse:
@@ -722,6 +764,48 @@ paths:
       security:
       - BearerAuth: []
       summary: List user workouts
+      tags:
+      - workouts
+  /api/v1/workouts/{id}:
+    get:
+      description: Get detailed workout information with exercises
+      parameters:
+      - description: Workout ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/internal_kinetria_gateways_http.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_kinetria_gateways_http.WorkoutDTO'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_kinetria_gateways_http.ErrorResponse'
+        "404":
+          description: Workout not found
+          schema:
+            $ref: '#/definitions/internal_kinetria_gateways_http.ErrorResponse'
+        "422":
+          description: Invalid workout ID
+          schema:
+            $ref: '#/definitions/internal_kinetria_gateways_http.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/internal_kinetria_gateways_http.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get workout by ID
       tags:
       - workouts
   /health:

@@ -28,12 +28,12 @@ func (m *mockWorkoutRepo) ExistsByIDAndUserID(_ context.Context, _, _ uuid.UUID)
 	return false, nil
 }
 
-func (m *mockWorkoutRepo) GetByID(_ context.Context, _, _ uuid.UUID) (*entities.Workout, []entities.Exercise, error) {
-	return nil, nil, nil
-}
-
 func (m *mockWorkoutRepo) GetFirstByUserID(_ context.Context, _ uuid.UUID) (*entities.Workout, error) {
 	return nil, nil
+}
+
+func (m *mockWorkoutRepo) GetByID(_ context.Context, _, _ uuid.UUID) (*entities.Workout, []entities.Exercise, error) {
+	return nil, nil, nil
 }
 
 func TestListWorkoutsUC_Execute(t *testing.T) {

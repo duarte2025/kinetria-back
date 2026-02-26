@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/ports"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type GetUserProfileInput struct {
@@ -19,14 +20,18 @@ type GetUserProfileOutput struct {
 }
 
 type GetUserProfileUC struct {
+	tracer   trace.Tracer
 	userRepo ports.UserRepository
 }
 
-func NewGetUserProfileUC(userRepo ports.UserRepository) *GetUserProfileUC {
-	return &GetUserProfileUC{userRepo: userRepo}
+func NewGetUserProfileUC(tracer trace.Tracer, userRepo ports.UserRepository) *GetUserProfileUC {
+	return &GetUserProfileUC{tracer: tracer, userRepo: userRepo}
 }
 
 func (uc *GetUserProfileUC) Execute(ctx context.Context, input GetUserProfileInput) (*GetUserProfileOutput, error) {
+	ctx, span := uc.tracer.Start(ctx, "GetUserProfileUC")
+	defer span.End()
+
 	user, err := uc.userRepo.GetByID(ctx, input.UserID)
 	if err != nil {
 		return nil, err

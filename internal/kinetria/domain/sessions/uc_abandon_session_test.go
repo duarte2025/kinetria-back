@@ -186,3 +186,7 @@ func (m *mockAbandonSessionRepo) UpdateStatus(ctx context.Context, sessionID uui
 	}
 	return true, nil
 }
+
+func (m *mockAbandonSessionRepo) GetCompletedSessionsByUserAndDateRange(_ context.Context, _ uuid.UUID, _, _ time.Time) ([]entities.Session, error) {
+	return nil, nil
+}
