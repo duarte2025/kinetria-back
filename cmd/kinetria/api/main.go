@@ -9,7 +9,6 @@ import (
 
 	_ "github.com/kinetria/kinetria-back/docs"
 	domainauth "github.com/kinetria/kinetria-back/internal/kinetria/domain/auth"
-	domaindashboard "github.com/kinetria/kinetria-back/internal/kinetria/domain/dashboard"
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/ports"
 	domainsessions "github.com/kinetria/kinetria-back/internal/kinetria/domain/sessions"
 	domainworkouts "github.com/kinetria/kinetria-back/internal/kinetria/domain/workouts"
@@ -121,12 +120,6 @@ func main() {
 			domainsessions.NewAbandonSessionUseCase,
 			domainworkouts.NewListWorkoutsUC,
 			domainworkouts.NewGetWorkoutUC,
-
-			// Dashboard use cases
-			domaindashboard.NewGetUserProfileUC,
-			domaindashboard.NewGetTodayWorkoutUC,
-			domaindashboard.NewGetWeekProgressUC,
-			domaindashboard.NewGetWeekStatsUC,
 
 			// Validator and HTTP
 			validator.New,

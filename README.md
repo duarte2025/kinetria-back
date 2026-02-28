@@ -62,7 +62,8 @@ Os arquivos SQL estão em `internal/kinetria/gateways/migrations/` e são embarc
 | `005_create_set_records.sql` | `set_records` | Registros de séries executadas |
 | `006_create_refresh_tokens.sql` | `refresh_tokens` | Tokens para autenticação JWT |
 | `007_create_audit_log.sql` | `audit_log` | Log de auditoria de ações |
-| `008_add_sessions_dashboard_index.sql` | `sessions` | Índice para dashboard |
+| `008_add_sessions_dashboard_index.sql` | `sessions` | Índice de otimização dashboard |
+| `009_refactor_exercises_to_shared_library.sql` | `exercises`, `workout_exercises` | Refatora exercises para biblioteca compartilhada com relacionamento N:N |
 
 ### Como funciona
 
@@ -85,11 +86,38 @@ docker-compose down -v && docker-compose up -d
 
 - `User` — Usuários do sistema
 - `Workout` — Planos de treino personalizados
-- `Exercise` — Exercícios de um treino
+- `Exercise` — Exercícios compartilhados (biblioteca)
+- `WorkoutExercise` — Configuração de um exercício dentro de um treino (N:N)
 - `Session` — Sessão de treino ativa
 - `SetRecord` — Registro de série executada
 - `RefreshToken` — Tokens para renovação de autenticação
 - `AuditLog` — Log de auditoria de ações
+
+### Relacionamento Exercises → Workouts (N:N)
+
+A partir da migration 009, exercises segue um modelo de **biblioteca compartilhada**:
+
+- **`exercises`** — Tabela de exercícios base (compartilhados entre workouts)
+  - `id`, `name`, `description`, `thumbnail_url`, `muscles`, timestamps
+  - Múltiplos workouts podem referenciar o mesmo exercise
+
+- **`workout_exercises`** — Tabela de junção (N:N)
+  - Conecta `workout_id` com `exercise_id`
+  - Armazena configurações específicas: `sets`, `reps`, `rest_time`, `weight`, `order_index`
+  - Permite que o mesmo exercício seja usado em diferentes workouts com diferentes configurações
+
+**Diagrama:**
+```
+workouts (1) ----< workout_exercises >---- (1) exercises
+                     (configurações)
+                  (sets, reps, weight, etc)
+```
+
+**Benefícios:**
+- ✅ Reutilização de exercises entre workouts
+- ✅ Economia de armazenamento (exercise definido uma vez)
+- ✅ Facilita manutenção de biblioteca central
+- ✅ Permite ajustar configurações por workout
 
 ### Value Objects
 
