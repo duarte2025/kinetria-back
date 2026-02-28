@@ -136,6 +136,12 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		"accessToken":  output.AccessToken,
 		"refreshToken": output.RefreshToken,
 		"expiresIn":    output.ExpiresIn,
+		"user": map[string]interface{}{
+			"id":              output.User.ID,
+			"name":            output.User.Name,
+			"email":           output.User.Email,
+			"profileImageUrl": output.User.ProfileImageURL,
+		},
 	})
 }
 

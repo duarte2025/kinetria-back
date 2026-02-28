@@ -24,6 +24,14 @@ type LoginOutput struct {
 	AccessToken  string
 	RefreshToken string
 	ExpiresIn    int
+	User         LoginUserData
+}
+
+type LoginUserData struct {
+	ID              uuid.UUID
+	Name            string
+	Email           string
+	ProfileImageURL string
 }
 
 // LoginUC implements the use case for authenticating a user.
@@ -93,5 +101,11 @@ func (uc *LoginUC) Execute(ctx context.Context, input LoginInput) (LoginOutput, 
 		AccessToken:  accessToken,
 		RefreshToken: refreshTokenPlain,
 		ExpiresIn:    int(uc.jwtExpiry.Seconds()),
+		User: LoginUserData{
+			ID:              user.ID,
+			Name:            user.Name,
+			Email:           user.Email,
+			ProfileImageURL: user.ProfileImageURL,
+		},
 	}, nil
 }
