@@ -53,6 +53,8 @@ As migrations SQL são aplicadas automaticamente ao iniciar a aplicação, tanto
 
 Os arquivos SQL estão em `internal/kinetria/gateways/migrations/` e são embarcados no binário via `embed.FS`.
 
+**Importante**: As migrations devem estar APENAS em `internal/kinetria/gateways/migrations/`. Não criar migrations em outros diretórios.
+
 | Arquivo | Tabela | Descrição |
 |---------|--------|-----------|
 | `001_create_users.sql` | `users` | Usuários do sistema |

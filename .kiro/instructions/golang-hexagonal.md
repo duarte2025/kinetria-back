@@ -516,6 +516,62 @@ func (c Client) GetData(ctx context.Context, input entities.GetDataInput) (entit
 
 ### 3.4 Repositories (internal/{service}/gateways/repositories/)
 
+#### Migrations
+
+**Localização**: `internal/{service}/gateways/migrations/`
+
+As migrations SQL são embarcadas no binário via `embed.FS` e aplicadas automaticamente ao iniciar a aplicação.
+
+```go
+package migrations
+
+import (
+    "context"
+    "database/sql"
+    "embed"
+    "fmt"
+    "sort"
+    "strings"
+)
+
+//go:embed *.sql
+var migrationsFS embed.FS
+
+type Migrator struct {
+    db *sql.DB
+}
+
+func NewMigrator(db *sql.DB) *Migrator {
+    return &Migrator{db: db}
+}
+
+func (m *Migrator) Run(ctx context.Context) error {
+    // Implementação da lógica de migrations
+}
+```
+
+**Regras:**
+- Migrations devem estar APENAS em `internal/{service}/gateways/migrations/`
+- Nomenclatura: `001_description.sql`, `002_description.sql`, etc.
+- Migrations são executadas em ordem alfabética
+- Cada migration é executada apenas uma vez (controle via tabela `schema_migrations`)
+- Use transações quando possível
+- Sempre adicione índices para colunas usadas em `WHERE`, `JOIN`, `ORDER BY`
+
+**Exemplo de Migration:**
+```sql
+-- 001_create_users.sql
+CREATE TABLE IF NOT EXISTS users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email VARCHAR(255) NOT NULL UNIQUE,
+    name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+```
+
 #### Repository Base
 
 ```go
