@@ -20,6 +20,10 @@ go.work
 # Environment variables
 .env
 
+# Database credentials
+pgpass
+servers.json
+
 # IDE
 .vscode/
 .idea/
@@ -34,4 +38,4 @@ Thumbs.db
 # Temporary files
 tmp/
 temp/
-api
+/api
