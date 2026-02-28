@@ -60,6 +60,7 @@ func main() {
 			// Database
 			repositories.NewDatabasePool,
 			repositories.NewSQLDB,
+			repositories.NewMigrator,
 
 			// JWT - Provide JWTManager as both concrete type and interface
 			func(cfg config.Config) *gatewayauth.JWTManager {
@@ -140,6 +141,7 @@ func main() {
 		fx.Invoke(func(router *chi.Mux, serviceRouter httpgateway.ServiceRouter) {
 			router.Route(serviceRouter.Pattern(), serviceRouter.Router)
 		}),
+		fx.Invoke(repositories.RunMigrations),
 		fx.Invoke(httpgateway.StartHTTPServer),
 	).Run()
 }

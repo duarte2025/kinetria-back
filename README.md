@@ -49,7 +49,9 @@ docker-compose down -v
 
 ## Migrations
 
-As migrations SQL estão em `migrations/` e são aplicadas automaticamente quando o container PostgreSQL inicia pela primeira vez.
+As migrations SQL são aplicadas automaticamente ao iniciar a aplicação, tanto em desenvolvimento quanto em produção.
+
+Os arquivos SQL estão em `internal/kinetria/gateways/migrations/` e são embarcados no binário via `embed.FS`.
 
 | Arquivo | Tabela | Descrição |
 |---------|--------|-----------|
@@ -60,8 +62,22 @@ As migrations SQL estão em `migrations/` e são aplicadas automaticamente quand
 | `005_create_set_records.sql` | `set_records` | Registros de séries executadas |
 | `006_create_refresh_tokens.sql` | `refresh_tokens` | Tokens para autenticação JWT |
 | `007_create_audit_log.sql` | `audit_log` | Log de auditoria de ações |
+| `008_add_sessions_dashboard_index.sql` | `sessions` | Índice para dashboard |
 
-Para reaplicar as migrations: `docker-compose down -v && docker-compose up -d`
+### Como funciona
+
+- Ao iniciar, a aplicação cria a tabela `schema_migrations` se não existir
+- Cada migration é executada apenas uma vez (controle via `schema_migrations`)
+- Migrations são executadas em ordem alfabética (001, 002, 003...)
+- Se uma migration falhar, a aplicação não inicia
+
+### Resetar banco de dados
+
+Para reaplicar todas as migrations do zero:
+
+```bash
+docker-compose down -v && docker-compose up -d
+```
 
 ## Estrutura de Domínio
 
