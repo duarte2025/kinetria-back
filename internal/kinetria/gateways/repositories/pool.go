@@ -9,6 +9,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/kinetria/kinetria-back/internal/kinetria/gateways/config"
+	"github.com/kinetria/kinetria-back/internal/kinetria/gateways/migrations"
+	"go.uber.org/fx"
 )
 
 func NewDatabasePool(cfg config.Config) (*pgxpool.Pool, error) {
@@ -49,4 +51,16 @@ func NewSQLDB(cfg config.Config) (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 	return db, nil
+}
+
+func NewMigrator(db *sql.DB) *migrations.Migrator {
+	return migrations.NewMigrator(db)
+}
+
+func RunMigrations(lc fx.Lifecycle, migrator *migrations.Migrator) {
+	lc.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			return migrator.Run(ctx)
+		},
+	})
 }
