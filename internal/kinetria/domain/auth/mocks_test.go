@@ -45,6 +45,10 @@ func (m *mockUserRepo) GetByID(ctx context.Context, id uuid.UUID) (*entities.Use
 	return nil, domainerrors.ErrNotFound
 }
 
+func (m *mockUserRepo) Update(_ context.Context, _ *entities.User) error {
+	return nil
+}
+
 // mockRefreshTokenRepo is a mock implementation of ports.RefreshTokenRepository for testing.
 type mockRefreshTokenRepo struct {
 	tokens    map[string]*entities.RefreshToken // keyed by token hash
