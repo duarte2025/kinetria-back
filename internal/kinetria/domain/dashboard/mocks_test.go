@@ -29,6 +29,10 @@ func (m *mockUserRepository) GetByID(_ context.Context, _ uuid.UUID) (*entities.
 	return m.user, nil
 }
 
+func (m *mockUserRepository) Update(_ context.Context, _ *entities.User) error {
+	return nil
+}
+
 // mockWorkoutRepository is a mock implementation of ports.WorkoutRepository for testing.
 type mockWorkoutRepository struct {
 	firstWorkout      *entities.Workout

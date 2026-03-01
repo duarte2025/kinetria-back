@@ -12,6 +12,7 @@ type ServiceRouter struct {
 	sessionsHandler  *SessionsHandler
 	workoutsHandler  *WorkoutsHandler
 	dashboardHandler *DashboardHandler
+	profileHandler   *ProfileHandler
 	jwtManager       *gatewayauth.JWTManager
 }
 
@@ -21,6 +22,7 @@ func NewServiceRouter(
 	sessionsHandler *SessionsHandler,
 	workoutsHandler *WorkoutsHandler,
 	dashboardHandler *DashboardHandler,
+	profileHandler *ProfileHandler,
 	jwtManager *gatewayauth.JWTManager,
 ) ServiceRouter {
 	return ServiceRouter{
@@ -28,6 +30,7 @@ func NewServiceRouter(
 		sessionsHandler:  sessionsHandler,
 		workoutsHandler:  workoutsHandler,
 		dashboardHandler: dashboardHandler,
+		profileHandler:   profileHandler,
 		jwtManager:       jwtManager,
 	}
 }
@@ -61,4 +64,8 @@ func (s ServiceRouter) Router(router chi.Router) {
 
 	// Dashboard (authenticated)
 	router.With(AuthMiddleware(s.jwtManager)).Get("/dashboard", s.dashboardHandler.GetDashboard)
+
+	// Profile (authenticated)
+	router.With(AuthMiddleware(s.jwtManager)).Get("/profile", s.profileHandler.HandleGetProfile)
+	router.With(AuthMiddleware(s.jwtManager)).Patch("/profile", s.profileHandler.HandleUpdateProfile)
 }

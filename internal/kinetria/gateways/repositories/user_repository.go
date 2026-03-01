@@ -3,13 +3,17 @@ package repositories
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/entities"
 	domainerrors "github.com/kinetria/kinetria-back/internal/kinetria/domain/errors"
+	"github.com/kinetria/kinetria-back/internal/kinetria/domain/vos"
 	"github.com/kinetria/kinetria-back/internal/kinetria/gateways/repositories/queries"
 )
 
@@ -57,7 +61,7 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*entitie
 		}
 		return nil, err
 	}
-	return rowToUser(row.ID, row.Name, row.Email, row.PasswordHash, row.ProfileImageUrl, row.CreatedAt, row.UpdatedAt), nil
+	return rowToUser(row.ID, row.Name, row.Email, row.PasswordHash, row.ProfileImageUrl, row.Preferences, row.CreatedAt, row.UpdatedAt), nil
 }
 
 // GetByID retrieves a user by ID.
@@ -70,13 +74,36 @@ func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*entities.U
 		}
 		return nil, err
 	}
-	return rowToUser(row.ID, row.Name, row.Email, row.PasswordHash, row.ProfileImageUrl, row.CreatedAt, row.UpdatedAt), nil
+	return rowToUser(row.ID, row.Name, row.Email, row.PasswordHash, row.ProfileImageUrl, row.Preferences, row.CreatedAt, row.UpdatedAt), nil
 }
 
-func rowToUser(id uuid.UUID, name, email, passwordHash string, profileImageUrl sql.NullString, createdAt, updatedAt time.Time) *entities.User {
+// Update updates an existing user's mutable fields.
+func (r *UserRepository) Update(ctx context.Context, user *entities.User) error {
+	preferencesJSON, err := json.Marshal(user.Preferences)
+	if err != nil {
+		return fmt.Errorf("failed to marshal preferences: %w", err)
+	}
+	return r.q.UpdateUser(ctx, queries.UpdateUserParams{
+		ID:   user.ID,
+		Name: user.Name,
+		ProfileImageUrl: sql.NullString{
+			String: user.ProfileImageURL,
+			Valid:  user.ProfileImageURL != "",
+		},
+		Preferences: preferencesJSON,
+	})
+}
+
+func rowToUser(id uuid.UUID, name, email, passwordHash string, profileImageUrl sql.NullString, preferencesJSON []byte, createdAt, updatedAt time.Time) *entities.User {
 	profileURL := ""
 	if profileImageUrl.Valid {
 		profileURL = profileImageUrl.String
+	}
+	prefs := vos.DefaultUserPreferences()
+	if len(preferencesJSON) > 0 {
+		if err := json.Unmarshal(preferencesJSON, &prefs); err != nil {
+			slog.Warn("failed to unmarshal user preferences, using defaults", "error", err)
+		}
 	}
 	return &entities.User{
 		ID:              id,
@@ -84,6 +111,7 @@ func rowToUser(id uuid.UUID, name, email, passwordHash string, profileImageUrl s
 		Email:           email,
 		PasswordHash:    passwordHash,
 		ProfileImageURL: profileURL,
+		Preferences:     prefs,
 		CreatedAt:       createdAt,
 		UpdatedAt:       updatedAt,
 	}

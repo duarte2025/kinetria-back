@@ -14,6 +14,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	domainauth "github.com/kinetria/kinetria-back/internal/kinetria/domain/auth"
 	domaindashboard "github.com/kinetria/kinetria-back/internal/kinetria/domain/dashboard"
+	domainprofile "github.com/kinetria/kinetria-back/internal/kinetria/domain/profile"
 	domainsessions "github.com/kinetria/kinetria-back/internal/kinetria/domain/sessions"
 	domainworkouts "github.com/kinetria/kinetria-back/internal/kinetria/domain/workouts"
 	gatewayauth "github.com/kinetria/kinetria-back/internal/kinetria/gateways/auth"
@@ -99,13 +100,17 @@ func SetupTestServer(t *testing.T) *TestServer {
 	getWeekProgressUC := domaindashboard.NewGetWeekProgressUC(tracer, sessionRepo)
 	getWeekStatsUC := domaindashboard.NewGetWeekStatsUC(tracer, sessionRepo)
 
+	getProfileUC := domainprofile.NewGetProfileUC(tracer, userRepo)
+	updateProfileUC := domainprofile.NewUpdateProfileUC(tracer, userRepo)
+
 	authHandler := service.NewAuthHandler(registerUC, loginUC, refreshTokenUC, logoutUC, jwtManager, validate)
 	sessionsHandler := service.NewSessionsHandler(startSessionUC, recordSetUC, finishSessionUC, abandonSessionUC)
 	workoutsHandler := service.NewWorkoutsHandler(listWorkoutsUC, getWorkoutUC, jwtManager)
 	dashboardHandler := service.NewDashboardHandler(getUserProfileUC, getTodayWorkoutUC, getWeekProgressUC, getWeekStatsUC)
+	profileHandler := service.NewProfileHandler(getProfileUC, updateProfileUC)
 
 	router := chi.NewRouter()
-	serviceRouter := service.NewServiceRouter(authHandler, sessionsHandler, workoutsHandler, dashboardHandler, jwtManager)
+	serviceRouter := service.NewServiceRouter(authHandler, sessionsHandler, workoutsHandler, dashboardHandler, profileHandler, jwtManager)
 	router.Route(serviceRouter.Pattern(), serviceRouter.Router)
 
 	httpServer := httptest.NewServer(router)

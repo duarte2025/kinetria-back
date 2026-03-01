@@ -16,7 +16,7 @@ import (
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (id, name, email, password_hash, profile_image_url, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING id, name, email, password_hash, profile_image_url, created_at, updated_at
+RETURNING id, name, email, password_hash, profile_image_url, preferences, created_at, updated_at
 `
 
 type CreateUserParams struct {
@@ -35,6 +35,7 @@ type CreateUserRow struct {
 	Email           string         `json:"email"`
 	PasswordHash    string         `json:"password_hash"`
 	ProfileImageUrl sql.NullString `json:"profile_image_url"`
+	Preferences     []byte         `json:"preferences"`
 	CreatedAt       time.Time      `json:"created_at"`
 	UpdatedAt       time.Time      `json:"updated_at"`
 }
@@ -56,6 +57,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 		&i.Email,
 		&i.PasswordHash,
 		&i.ProfileImageUrl,
+		&i.Preferences,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -63,7 +65,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, name, email, password_hash, profile_image_url, created_at, updated_at
+SELECT id, name, email, password_hash, profile_image_url, preferences, created_at, updated_at
 FROM users
 WHERE email = $1
 LIMIT 1
@@ -75,6 +77,7 @@ type GetUserByEmailRow struct {
 	Email           string         `json:"email"`
 	PasswordHash    string         `json:"password_hash"`
 	ProfileImageUrl sql.NullString `json:"profile_image_url"`
+	Preferences     []byte         `json:"preferences"`
 	CreatedAt       time.Time      `json:"created_at"`
 	UpdatedAt       time.Time      `json:"updated_at"`
 }
@@ -88,6 +91,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEm
 		&i.Email,
 		&i.PasswordHash,
 		&i.ProfileImageUrl,
+		&i.Preferences,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -95,7 +99,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEm
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, name, email, password_hash, profile_image_url, created_at, updated_at
+SELECT id, name, email, password_hash, profile_image_url, preferences, created_at, updated_at
 FROM users
 WHERE id = $1
 LIMIT 1
@@ -107,6 +111,7 @@ type GetUserByIDRow struct {
 	Email           string         `json:"email"`
 	PasswordHash    string         `json:"password_hash"`
 	ProfileImageUrl sql.NullString `json:"profile_image_url"`
+	Preferences     []byte         `json:"preferences"`
 	CreatedAt       time.Time      `json:"created_at"`
 	UpdatedAt       time.Time      `json:"updated_at"`
 }
@@ -120,8 +125,37 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (GetUserByIDRow
 		&i.Email,
 		&i.PasswordHash,
 		&i.ProfileImageUrl,
+		&i.Preferences,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
 }
+
+const updateUser = `-- name: UpdateUser :exec
+UPDATE users
+SET
+    name = $2,
+    profile_image_url = $3,
+    preferences = $4,
+    updated_at = NOW()
+WHERE id = $1
+`
+
+type UpdateUserParams struct {
+	ID              uuid.UUID      `json:"id"`
+	Name            string         `json:"name"`
+	ProfileImageUrl sql.NullString `json:"profile_image_url"`
+	Preferences     []byte         `json:"preferences"`
+}
+
+func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
+	_, err := q.db.ExecContext(ctx, updateUser,
+		arg.ID,
+		arg.Name,
+		arg.ProfileImageUrl,
+		arg.Preferences,
+	)
+	return err
+}
+
