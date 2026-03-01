@@ -22,4 +22,9 @@ var (
 	ErrSessionAlreadyClosed = errors.New("session is already closed")
 	ErrSetAlreadyRecorded   = errors.New("set already recorded")
 	ErrExerciseNotFound     = errors.New("exercise not found")
+
+	// Workout management errors
+	ErrForbidden                = errors.New("forbidden")
+	ErrWorkoutHasActiveSessions = errors.New("workout has active sessions")
+	ErrCannotModifyTemplate     = errors.New("cannot modify template workouts")
 )

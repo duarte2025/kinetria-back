@@ -58,6 +58,26 @@ func (m *mockWorkoutRepository) GetByID(_ context.Context, _, _ uuid.UUID) (*ent
 	return nil, nil, nil
 }
 
+func (m *mockWorkoutRepository) GetByIDOnly(_ context.Context, _ uuid.UUID) (*entities.Workout, error) {
+	return nil, nil
+}
+
+func (m *mockWorkoutRepository) Create(_ context.Context, _ entities.Workout, _ []entities.WorkoutExercise) error {
+	return nil
+}
+
+func (m *mockWorkoutRepository) Update(_ context.Context, _ entities.Workout, _ []entities.WorkoutExercise) error {
+	return nil
+}
+
+func (m *mockWorkoutRepository) Delete(_ context.Context, _ uuid.UUID) error {
+	return nil
+}
+
+func (m *mockWorkoutRepository) HasActiveSessions(_ context.Context, _ uuid.UUID) (bool, error) {
+	return false, nil
+}
+
 // mockSessionRepository is a mock implementation of ports.SessionRepository for testing.
 type mockSessionRepository struct {
 	completedSessions []entities.Session

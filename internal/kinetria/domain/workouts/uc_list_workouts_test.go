@@ -36,6 +36,26 @@ func (m *mockWorkoutRepo) GetByID(_ context.Context, _, _ uuid.UUID) (*entities.
 	return nil, nil, nil
 }
 
+func (m *mockWorkoutRepo) GetByIDOnly(_ context.Context, _ uuid.UUID) (*entities.Workout, error) {
+	return nil, nil
+}
+
+func (m *mockWorkoutRepo) Create(_ context.Context, _ entities.Workout, _ []entities.WorkoutExercise) error {
+	return nil
+}
+
+func (m *mockWorkoutRepo) Update(_ context.Context, _ entities.Workout, _ []entities.WorkoutExercise) error {
+	return nil
+}
+
+func (m *mockWorkoutRepo) Delete(_ context.Context, _ uuid.UUID) error {
+	return nil
+}
+
+func (m *mockWorkoutRepo) HasActiveSessions(_ context.Context, _ uuid.UUID) (bool, error) {
+	return false, nil
+}
+
 func TestListWorkoutsUC_Execute(t *testing.T) {
 	validUserID := uuid.New()
 	now := time.Now()
