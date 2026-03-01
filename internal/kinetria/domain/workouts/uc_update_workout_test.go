@@ -3,6 +3,7 @@ package workouts_test
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -240,7 +241,7 @@ func TestUpdateWorkoutUC_Execute(t *testing.T) {
 					t.Errorf("expected error containing %q, got nil", tt.expectedError)
 					return
 				}
-				if !containsString(err.Error(), tt.expectedError) {
+				if !strings.Contains(err.Error(), tt.expectedError) {
 					t.Errorf("expected error containing %q, got %q", tt.expectedError, err.Error())
 				}
 				if tt.expectedDomErr != nil && !errors.Is(err, tt.expectedDomErr) {
@@ -259,17 +260,4 @@ func TestUpdateWorkoutUC_Execute(t *testing.T) {
 			}
 		})
 	}
-}
-
-// containsString checks if s contains substr (avoids importing strings in multiple test files).
-func containsString(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
-		func() bool {
-			for i := 0; i <= len(s)-len(substr); i++ {
-				if s[i:i+len(substr)] == substr {
-					return true
-				}
-			}
-			return false
-		}())
 }

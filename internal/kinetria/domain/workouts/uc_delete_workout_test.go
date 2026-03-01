@@ -3,6 +3,7 @@ package workouts_test
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -175,7 +176,7 @@ func TestDeleteWorkoutUC_Execute(t *testing.T) {
 					t.Errorf("expected error containing %q, got nil", tt.expectedError)
 					return
 				}
-				if !containsString(err.Error(), tt.expectedError) {
+				if !strings.Contains(err.Error(), tt.expectedError) {
 					t.Errorf("expected error containing %q, got %q", tt.expectedError, err.Error())
 				}
 				if tt.expectedDomErr != nil && !errors.Is(err, tt.expectedDomErr) {
