@@ -222,9 +222,11 @@ func (r *WorkoutRepository) Update(ctx context.Context, workout entities.Workout
 		return fmt.Errorf("failed to update workout: %w", err)
 	}
 
-	err = qtx.DeleteWorkoutExercises(ctx, workout.ID)
-	if err != nil {
-		return fmt.Errorf("failed to delete workout exercises: %w", err)
+	if len(exercises) > 0 {
+		err = qtx.DeleteWorkoutExercises(ctx, workout.ID)
+		if err != nil {
+			return fmt.Errorf("failed to delete workout exercises: %w", err)
+		}
 	}
 
 	for _, ex := range exercises {

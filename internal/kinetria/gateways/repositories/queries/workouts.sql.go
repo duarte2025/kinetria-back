@@ -59,7 +59,7 @@ SELECT
     created_by,
     deleted_at
 FROM workouts
-WHERE user_id = $1
+WHERE user_id = $1 AND deleted_at IS NULL
 ORDER BY created_at ASC
 LIMIT 1
 `
@@ -99,7 +99,7 @@ SELECT
     created_by,
     deleted_at
 FROM workouts
-WHERE id = $1 AND user_id = $2
+WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL
 `
 
 type GetWorkoutByIDParams struct {
