@@ -95,6 +95,9 @@ func SetupTestServer(t *testing.T) *TestServer {
 
 	listWorkoutsUC := domainworkouts.NewListWorkoutsUC(workoutRepo)
 	getWorkoutUC := domainworkouts.NewGetWorkoutUC(workoutRepo)
+	createWorkoutUC := domainworkouts.NewCreateWorkoutUC(workoutRepo, exerciseRepo)
+	updateWorkoutUC := domainworkouts.NewUpdateWorkoutUC(workoutRepo, exerciseRepo)
+	deleteWorkoutUC := domainworkouts.NewDeleteWorkoutUC(workoutRepo)
 
 	getUserProfileUC := domaindashboard.NewGetUserProfileUC(tracer, userRepo)
 	getTodayWorkoutUC := domaindashboard.NewGetTodayWorkoutUC(tracer, workoutRepo)
@@ -110,7 +113,7 @@ func SetupTestServer(t *testing.T) *TestServer {
 
 	authHandler := service.NewAuthHandler(registerUC, loginUC, refreshTokenUC, logoutUC, jwtManager, validate)
 	sessionsHandler := service.NewSessionsHandler(startSessionUC, recordSetUC, finishSessionUC, abandonSessionUC)
-	workoutsHandler := service.NewWorkoutsHandler(listWorkoutsUC, getWorkoutUC, jwtManager)
+	workoutsHandler := service.NewWorkoutsHandler(listWorkoutsUC, getWorkoutUC, createWorkoutUC, updateWorkoutUC, deleteWorkoutUC, jwtManager)
 	dashboardHandler := service.NewDashboardHandler(getUserProfileUC, getTodayWorkoutUC, getWeekProgressUC, getWeekStatsUC)
 	profileHandler := service.NewProfileHandler(getProfileUC, updateProfileUC)
 	exercisesHandler := service.NewExercisesHandler(listExercisesUC, getExerciseUC, getExerciseHistoryUC, jwtManager)
