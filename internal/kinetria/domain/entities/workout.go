@@ -19,4 +19,18 @@ type Workout struct {
 	ImageURL    string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
+	CreatedBy   *uuid.UUID
+	DeletedAt   *time.Time
+}
+
+// WorkoutExercise represents the association between a workout and an exercise.
+type WorkoutExercise struct {
+	ID         uuid.UUID
+	WorkoutID  uuid.UUID
+	ExerciseID uuid.UUID
+	Sets       int
+	Reps       string
+	RestTime   int
+	Weight     int
+	OrderIndex int
 }
