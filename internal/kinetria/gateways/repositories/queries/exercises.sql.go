@@ -7,7 +7,9 @@ package queries
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -107,3 +109,256 @@ func (q *Queries) ListExercisesByWorkoutID(ctx context.Context, workoutID uuid.U
 	}
 	return items, nil
 }
+
+const listExercises = `-- name: ListExercises :many
+SELECT
+    id, name, description, thumbnail_url, muscles,
+    instructions, tips, difficulty, equipment, video_url,
+    created_at, updated_at
+FROM exercises
+WHERE
+    ($1::text IS NULL OR name ILIKE '%' || $1::text || '%')
+    AND ($2::text IS NULL OR muscles @> jsonb_build_array($2::text))
+    AND ($3::text IS NULL OR equipment = $3::text)
+    AND ($4::text IS NULL OR difficulty = $4::text)
+ORDER BY name ASC
+LIMIT $5 OFFSET $6
+`
+
+type ListExercisesParams struct {
+	Search      sql.NullString `json:"search"`
+	MuscleGroup sql.NullString `json:"muscle_group"`
+	Equipment   sql.NullString `json:"equipment"`
+	Difficulty  sql.NullString `json:"difficulty"`
+	Limit       int32          `json:"limit"`
+	Offset      int32          `json:"offset"`
+}
+
+func (q *Queries) ListExercises(ctx context.Context, arg ListExercisesParams) ([]Exercise, error) {
+	rows, err := q.db.QueryContext(ctx, listExercises,
+		arg.Search,
+		arg.MuscleGroup,
+		arg.Equipment,
+		arg.Difficulty,
+		arg.Limit,
+		arg.Offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Exercise
+	for rows.Next() {
+		var i Exercise
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.ThumbnailUrl,
+			&i.Muscles,
+			&i.Instructions,
+			&i.Tips,
+			&i.Difficulty,
+			&i.Equipment,
+			&i.VideoUrl,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const countExercises = `-- name: CountExercises :one
+SELECT COUNT(*)
+FROM exercises
+WHERE
+    ($1::text IS NULL OR name ILIKE '%' || $1::text || '%')
+    AND ($2::text IS NULL OR muscles @> jsonb_build_array($2::text))
+    AND ($3::text IS NULL OR equipment = $3::text)
+    AND ($4::text IS NULL OR difficulty = $4::text)
+`
+
+type CountExercisesParams struct {
+	Search      sql.NullString `json:"search"`
+	MuscleGroup sql.NullString `json:"muscle_group"`
+	Equipment   sql.NullString `json:"equipment"`
+	Difficulty  sql.NullString `json:"difficulty"`
+}
+
+func (q *Queries) CountExercises(ctx context.Context, arg CountExercisesParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countExercises,
+		arg.Search,
+		arg.MuscleGroup,
+		arg.Equipment,
+		arg.Difficulty,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const getExerciseByID = `-- name: GetExerciseByID :one
+SELECT
+    id, name, description, thumbnail_url, muscles,
+    instructions, tips, difficulty, equipment, video_url,
+    created_at, updated_at
+FROM exercises
+WHERE id = $1
+`
+
+func (q *Queries) GetExerciseByID(ctx context.Context, id uuid.UUID) (Exercise, error) {
+	row := q.db.QueryRowContext(ctx, getExerciseByID, id)
+	var i Exercise
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.ThumbnailUrl,
+		&i.Muscles,
+		&i.Instructions,
+		&i.Tips,
+		&i.Difficulty,
+		&i.Equipment,
+		&i.VideoUrl,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getExerciseUserStats = `-- name: GetExerciseUserStats :one
+SELECT
+    MAX(s.started_at)        AS last_performed,
+    MAX(sr.weight)           AS best_weight,
+    COUNT(DISTINCT s.id)     AS times_performed,
+    AVG(sr.weight::float)    AS average_weight
+FROM sessions s
+JOIN workout_exercises we ON we.workout_id = s.workout_id AND we.exercise_id = $1
+JOIN set_records sr ON sr.session_id = s.id AND sr.workout_exercise_id = we.id
+WHERE s.user_id = $2 AND s.status = 'completed'
+`
+
+type GetExerciseUserStatsParams struct {
+	ExerciseID uuid.UUID `json:"exercise_id"`
+	UserID     uuid.UUID `json:"user_id"`
+}
+
+type GetExerciseUserStatsRow struct {
+	LastPerformed  sql.NullTime    `json:"last_performed"`
+	BestWeight     sql.NullInt64   `json:"best_weight"`
+	TimesPerformed int64           `json:"times_performed"`
+	AverageWeight  sql.NullFloat64 `json:"average_weight"`
+}
+
+func (q *Queries) GetExerciseUserStats(ctx context.Context, arg GetExerciseUserStatsParams) (GetExerciseUserStatsRow, error) {
+	row := q.db.QueryRowContext(ctx, getExerciseUserStats, arg.ExerciseID, arg.UserID)
+	var i GetExerciseUserStatsRow
+	err := row.Scan(
+		&i.LastPerformed,
+		&i.BestWeight,
+		&i.TimesPerformed,
+		&i.AverageWeight,
+	)
+	return i, err
+}
+
+const getExerciseHistory = `-- name: GetExerciseHistory :many
+SELECT
+    s.id           AS session_id,
+    w.name         AS workout_name,
+    s.started_at   AS performed_at,
+    sr.set_number,
+    sr.reps,
+    sr.weight,
+    sr.status
+FROM sessions s
+JOIN workouts w ON s.workout_id = w.id
+JOIN workout_exercises we ON we.workout_id = s.workout_id AND we.exercise_id = $1
+JOIN set_records sr ON sr.session_id = s.id AND sr.workout_exercise_id = we.id
+WHERE s.user_id = $2 AND s.status = 'completed'
+ORDER BY s.started_at DESC, sr.set_number ASC
+LIMIT $3 OFFSET $4
+`
+
+type GetExerciseHistoryParams struct {
+	ExerciseID uuid.UUID `json:"exercise_id"`
+	UserID     uuid.UUID `json:"user_id"`
+	Limit      int32     `json:"limit"`
+	Offset     int32     `json:"offset"`
+}
+
+type GetExerciseHistoryRow struct {
+	SessionID   uuid.UUID `json:"session_id"`
+	WorkoutName string    `json:"workout_name"`
+	PerformedAt time.Time `json:"performed_at"`
+	SetNumber   int32     `json:"set_number"`
+	Reps        int32     `json:"reps"`
+	Weight      int32     `json:"weight"`
+	Status      string    `json:"status"`
+}
+
+func (q *Queries) GetExerciseHistory(ctx context.Context, arg GetExerciseHistoryParams) ([]GetExerciseHistoryRow, error) {
+	rows, err := q.db.QueryContext(ctx, getExerciseHistory,
+		arg.ExerciseID,
+		arg.UserID,
+		arg.Limit,
+		arg.Offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetExerciseHistoryRow
+	for rows.Next() {
+		var i GetExerciseHistoryRow
+		if err := rows.Scan(
+			&i.SessionID,
+			&i.WorkoutName,
+			&i.PerformedAt,
+			&i.SetNumber,
+			&i.Reps,
+			&i.Weight,
+			&i.Status,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const countExerciseHistory = `-- name: CountExerciseHistory :one
+SELECT COUNT(DISTINCT s.id)
+FROM sessions s
+JOIN workout_exercises we ON we.workout_id = s.workout_id AND we.exercise_id = $1
+JOIN set_records sr ON sr.session_id = s.id AND sr.workout_exercise_id = we.id
+WHERE s.user_id = $2 AND s.status = 'completed'
+`
+
+type CountExerciseHistoryParams struct {
+	ExerciseID uuid.UUID `json:"exercise_id"`
+	UserID     uuid.UUID `json:"user_id"`
+}
+
+func (q *Queries) CountExerciseHistory(ctx context.Context, arg CountExerciseHistoryParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countExerciseHistory, arg.ExerciseID, arg.UserID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
