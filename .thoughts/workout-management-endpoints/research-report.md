@@ -16,23 +16,23 @@ Implementar 3 endpoints de gerenciamento de workouts customizados:
 
 ---
 
-## 2) Clarifying Questions (para o dev)
+## 2) Decisions Made
 
 ### Regras de Negócio
-1. **Ownership model:** Usar `created_by UUID` (FK para users) ou `is_custom BOOLEAN`? `created_by` é mais flexível para futuras features (compartilhamento).
-2. **Workout template vs customizado:** Workouts sem `created_by` são templates (read-only)? Ou todos os workouts pertencem a um usuário?
-3. **Deleção de workout:** Soft delete (adicionar campo `deleted_at`) ou hard delete? O que acontece com sessions ativas que referenciam o workout deletado?
-4. **Atualização de workout:** Permitir atualizar workout que já tem sessions completadas? Ou bloquear/versionar?
+1. **Ownership model:** `created_by UUID` (FK para users, nullable). NULL = template (read-only), NOT NULL = customizado.
+2. **Workout template vs customizado:** `created_by = NULL` são templates. `created_by = userID` são customizados (editáveis).
+3. **Deleção:** Soft delete (`deleted_at`). Bloquear se houver sessions ativas.
+4. **Atualização:** Permitir atualizar workout com sessions completadas. Não versionar na v1.
 
 ### Interface / Contrato
-5. **POST /workouts:** Criar workout vazio (sem exercises) e adicionar depois? Ou exigir pelo menos 1 exercise?
-6. **PUT /workouts:** Atualização completa (substituir todos os exercises) ou parcial (merge)?
-7. **Validações:** Limites de sets (min/max)? Limites de exercises por workout (max 20)?
+5. **POST /workouts:** Exigir pelo menos 1 exercise. Workout vazio não é válido.
+6. **PUT /workouts:** Atualização completa (substituir todos os exercises). PUT = replace.
+7. **Validações:** Sets 1-10, RestTime 0-600s, Exercises 1-20 por workout, Order index sequencial sem duplicatas (gaps permitidos).
 
 ### Persistência
-8. **Transação:** Criar/atualizar workout + workout_exercises deve ser atômico (transação)?
-9. **Order index:** Validar que não há duplicatas? Reordenar automaticamente (1, 2, 3...) ou aceitar gaps?
-10. **Cascade delete:** Se deletar workout, deletar workout_exercises automaticamente (ON DELETE CASCADE já existe)?
+8. **Transação:** Sim, criar/atualizar workout + workout_exercises deve ser atômico.
+9. **Order index:** Validar sem duplicatas. Aceitar gaps (1, 2, 5 é válido).
+10. **Cascade delete:** Sim, ON DELETE CASCADE já existe. Workout_exercises deletados automaticamente.
 
 ---
 
@@ -700,20 +700,25 @@ LIMIT $2 OFFSET $3;
 ## 8) Handoff Notes to Plan
 
 ### Assunções feitas
-- Usar `created_by UUID` (FK para users) para ownership
+- Usar `created_by UUID` (FK para users, nullable) para ownership
 - Workouts com `created_by = NULL` são templates (read-only)
 - Usar soft delete (`deleted_at`) para preservar histórico
-- Não permitir deletar workout com sessions ativas
-- Update substitui todos os exercises (não é merge)
+- Bloquear deleção se houver sessions ativas
+- PUT substitui todos os exercises (não é merge)
 - Exigir pelo menos 1 exercise ao criar workout
+- Permitir atualizar workout com sessions completadas (sem versionamento)
+- Validações: Sets 1-10, RestTime 0-600s, Exercises 1-20, Order index sem duplicatas (gaps ok)
 
 ### Dependências
-- **Decisão de negócio:**
-  - Soft delete ou hard delete?
-  - Permitir atualizar workout com sessions completadas?
-  - Limites de exercises por workout (max 20?)
-- **Decisão técnica:**
-  - Validar order_index sem duplicatas ou reordenar automaticamente?
+- **Decisões implementadas:**
+  - Ownership: `created_by UUID` (nullable)
+  - Soft delete com `deleted_at`
+  - Bloquear deleção se sessions ativas
+  - PUT = atualização completa (replace)
+  - Exigir 1+ exercise
+  - Validações: Sets 1-10, RestTime 0-600s, Exercises 1-20
+- **Transações:**
+  - Criar/atualizar workout + workout_exercises atomicamente
 
 ### Recomendações para Plano de Testes
 
