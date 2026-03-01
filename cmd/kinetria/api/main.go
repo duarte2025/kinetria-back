@@ -11,6 +11,7 @@ import (
 	domainauth "github.com/kinetria/kinetria-back/internal/kinetria/domain/auth"
 	domaindashboard "github.com/kinetria/kinetria-back/internal/kinetria/domain/dashboard"
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/ports"
+	domainprofile "github.com/kinetria/kinetria-back/internal/kinetria/domain/profile"
 	domainsessions "github.com/kinetria/kinetria-back/internal/kinetria/domain/sessions"
 	domainworkouts "github.com/kinetria/kinetria-back/internal/kinetria/domain/workouts"
 	gatewayauth "github.com/kinetria/kinetria-back/internal/kinetria/gateways/auth"
@@ -125,6 +126,8 @@ func main() {
 			domaindashboard.NewGetTodayWorkoutUC,
 			domaindashboard.NewGetWeekProgressUC,
 			domaindashboard.NewGetWeekStatsUC,
+			domainprofile.NewGetProfileUC,
+			domainprofile.NewUpdateProfileUC,
 
 			// Validator and HTTP
 			validator.New,
@@ -133,6 +136,7 @@ func main() {
 			httpgateway.NewSessionsHandler,
 			httpgateway.NewWorkoutsHandler,
 			httpgateway.NewDashboardHandler,
+			httpgateway.NewProfileHandler,
 			httpgateway.NewServiceRouter,
 			chi.NewRouter,
 		),
