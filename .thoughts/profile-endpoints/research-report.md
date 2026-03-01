@@ -16,20 +16,20 @@ Implementar 3 endpoints de gerenciamento de perfil do usuário:
 
 ---
 
-## 2) Clarifying Questions (para o dev)
+## 2) Decisions Made
 
 ### Persistência
-1. **Campo `preferences`:** Qual schema JSON esperado? Sugestão: `{"theme": "dark|light", "language": "pt-BR|en-US", "notifications": {"email": bool, "push": bool}}`
-2. **Validação de preferences:** Validar schema no backend ou aceitar qualquer JSON válido?
+1. **Campo `preferences`:** Struct tipada: `{"theme": "dark"|"light", "language": "pt-BR"|"en-US"}`. Notificações ficam para v2.
+2. **Validação de preferences:** Validar schema no backend (struct tipada). Rejeitar valores inválidos com 400.
 
 ### Interface / Contrato
-3. **PATCH /profile:** Permitir atualização parcial (apenas campos enviados) ou exigir todos os campos?
-4. **Upload de avatar:** Aceitar apenas imagens (JPEG/PNG/WebP)? Tamanho máximo? Dimensões mínimas/máximas?
-5. **URL de avatar:** Retornar URL completa ou path relativo? Onde armazenar por enquanto (filesystem local, S3, ou apenas mock)?
+3. **PATCH /profile:** Atualização parcial (apenas campos enviados). Usar ponteiros nos DTOs.
+4. **Upload de avatar:** Adiar para v2. Por enquanto, permitir atualizar URL via PATCH /profile (string).
+5. **Formatos futuros (v2):** JPEG/PNG/WebP, max 5MB, 100x100px a 2000x2000px.
 
 ### Regras de Negócio
-6. **Validação de name:** Tamanho mínimo/máximo? Permitir caracteres especiais?
-7. **Concorrência:** Usar optimistic locking (`updated_at`) ou last-write-wins?
+6. **Validação de name:** 2-100 caracteres. Permitir letras, números, espaços, acentos. Não permitir apenas espaços.
+7. **Concorrência:** Last-write-wins (sem optimistic locking na v1).
 
 ---
 
@@ -131,21 +131,14 @@ type User struct {
 **Alternativa (struct tipada):**
 ```go
 type UserPreferences struct {
-    Theme         string                 `json:"theme"`         // "dark" | "light"
-    Language      string                 `json:"language"`      // "pt-BR" | "en-US"
-    Notifications NotificationPreferences `json:"notifications"`
-}
-
-type NotificationPreferences struct {
-    Email bool `json:"email"`
-    Push  bool `json:"push"`
+    Theme    string `json:"theme"`    // "dark" | "light"
+    Language string `json:"language"` // "pt-BR" | "en-US"
 }
 ```
 
 **Arquivos a criar:**
 - `internal/kinetria/domain/profile/uc_get_profile.go`
 - `internal/kinetria/domain/profile/uc_update_profile.go`
-- `internal/kinetria/domain/profile/uc_upload_avatar.go` (opcional, se implementar upload)
 
 ---
 
@@ -215,28 +208,32 @@ Estrutura:
 type ProfileHandler struct {
     getProfileUC    *profile.GetProfileUC
     updateProfileUC *profile.UpdateProfileUC
-    uploadAvatarUC  *profile.UploadAvatarUC // opcional
 }
 
 // DTOs
 type GetProfileResponse struct {
-    ID              string                 `json:"id"`
-    Name            string                 `json:"name"`
-    Email           string                 `json:"email"`
-    ProfileImageURL *string                `json:"profileImageUrl"`
-    Preferences     map[string]interface{} `json:"preferences"`
+    ID              string           `json:"id"`
+    Name            string           `json:"name"`
+    Email           string           `json:"email"`
+    ProfileImageURL *string          `json:"profileImageUrl"`
+    Preferences     UserPreferences  `json:"preferences"`
+}
+
+type UserPreferences struct {
+    Theme    string `json:"theme"`    // "dark" | "light"
+    Language string `json:"language"` // "pt-BR" | "en-US"
 }
 
 type UpdateProfileRequest struct {
-    Name        *string                `json:"name"`        // opcional
-    Preferences map[string]interface{} `json:"preferences"` // opcional
+    Name            *string          `json:"name"`            // opcional
+    ProfileImageURL *string          `json:"profileImageUrl"` // opcional
+    Preferences     *UserPreferences `json:"preferences"`     // opcional
 }
 ```
 
 **Handlers:**
 - `GET /api/v1/profile` → `HandleGetProfile()`
 - `PATCH /api/v1/profile` → `HandleUpdateProfile()`
-- `POST /api/v1/profile/avatar` → `HandleUploadAvatar()` (opcional)
 
 ---
 
@@ -253,7 +250,6 @@ r.Route("/api/v1", func(r chi.Router) {
     // Profile endpoints
     r.Get("/profile", profileHandler.HandleGetProfile)
     r.Patch("/profile", profileHandler.HandleUpdateProfile)
-    r.Post("/profile/avatar", profileHandler.HandleUploadAvatar) // opcional
 })
 ```
 
@@ -270,7 +266,6 @@ fx.Provide(
     // Use cases
     profile.NewGetProfileUC,
     profile.NewUpdateProfileUC,
-    profile.NewUploadAvatarUC, // opcional
     
     // Handler
     fx.Annotate(
@@ -290,21 +285,13 @@ fx.Provide(
 
 ### Validações
 - **Preferences schema:** Se aceitar JSON livre, pode ter dados inconsistentes
-- **Mitigação:** Validar schema no backend (usar struct tipada + validação)
-- **Name vazio:** Validar tamanho mínimo (ex: 2 caracteres)
-- **Preferences muito grande:** Limitar tamanho do JSON (ex: 10KB)
-
-### Upload de Avatar
-- **Tipo de arquivo:** Validar MIME type (image/jpeg, image/png, image/webp)
-- **Tamanho:** Limitar a 5MB
-- **Dimensões:** Validar mínimo 100x100px, máximo 2000x2000px
-- **Storage:** Decisão pendente (S3, filesystem local, ou mock URL)
-- **Cleanup:** Se trocar avatar, deletar arquivo antigo
+- **Mitigação:** Validar schema no backend (usar struct tipada `UserPreferences`)
+- **Name vazio:** Validar tamanho mínimo (2 caracteres), máximo (100 caracteres)
+- **Preferences muito grande:** Limitar tamanho do JSON (ex: 1KB)
 
 ### Performance
 - **GET /profile:** Query simples, sem risco
 - **PATCH /profile:** Update simples, sem risco
-- **Índice GIN em preferences:** Só necessário se filtrar por preferences (improvável)
 
 ---
 
@@ -313,7 +300,7 @@ fx.Provide(
 ### Etapa 1: Migration e Domain (30min)
 1. Criar migration `010_add_user_preferences.sql`
 2. Adicionar campo `Preferences` em `entities.User`
-3. Decidir: `map[string]interface{}` ou struct tipada `UserPreferences`
+3. Usar struct tipada `UserPreferences` (theme, language)
 
 ### Etapa 2: Repository (30min)
 1. Adicionar método `Update()` em `ports.UserRepository`
@@ -328,7 +315,7 @@ fx.Provide(
    - Retorna entity
 2. Criar `uc_update_profile.go`:
    - Recebe userID + dados para atualizar
-   - Valida inputs (name não vazio, preferences válido)
+   - Valida inputs (name 2-100 chars, preferences válido)
    - Busca user atual
    - Atualiza campos modificados
    - Chama `userRepo.Update()`
@@ -353,30 +340,28 @@ fx.Provide(
 ### Etapa 6: Testes (1h)
 1. Unit tests para use cases (mock repository)
 2. Integration tests para endpoints (DB real)
-3. Edge cases: preferences inválido, name vazio, concorrência
-
-### Etapa 7 (Opcional): Upload de Avatar (2-3h)
-1. Decidir storage (S3, filesystem, mock)
-2. Criar gateway `storage/image_storage.go`
-3. Implementar `uc_upload_avatar.go`
-4. Implementar `HandleUploadAvatar()` com `multipart/form-data`
-5. Validar tipo, tamanho, dimensões
-6. Testes com mock do storage
+3. Edge cases: preferences inválido, name vazio
 
 ---
 
 ## 8) Handoff Notes to Plan
 
 ### Assunções feitas
-- Campo `preferences` será JSONB com schema flexível (ou struct tipada)
+- Campo `preferences` será JSONB com struct tipada `UserPreferences` (theme, language)
 - PATCH /profile permite atualização parcial (apenas campos enviados)
-- Upload de avatar será adiado ou usará URL mock (decisão pendente)
+- Upload de avatar adiado para v2 (permitir atualizar URL via PATCH por enquanto)
 - Não haverá optimistic locking na v1 (aceitar last-write-wins)
+- Validação de name: 2-100 caracteres
 
 ### Dependências
-- **Decisão de negócio:** Schema de preferences (livre ou tipado?)
-- **Decisão técnica:** Storage para avatars (S3, filesystem, mock?)
-- **Validações:** Tamanho mínimo/máximo de name, tamanho máximo de preferences
+- **Decisões implementadas:**
+  - Schema de preferences: struct tipada (theme, language)
+  - Upload de avatar: adiado para v2
+  - Atualização parcial via PATCH
+  - Last-write-wins (sem optimistic locking)
+- **Validações:**
+  - Name: 2-100 caracteres
+  - Preferences: validar valores de theme e language
 
 ### Recomendações para Plano de Testes
 
@@ -386,14 +371,12 @@ fx.Provide(
 
 **Integration tests:**
 - `GET /profile`: retorna 200 com dados corretos
-- `PATCH /profile`: atualiza name, atualiza preferences, retorna 400 para inputs inválidos
-- `POST /profile/avatar`: (se implementar) valida tipo, tamanho, dimensões
+- `PATCH /profile`: atualiza name, atualiza preferences, atualiza profileImageUrl, retorna 400 para inputs inválidos
 
 **Edge cases:**
-- Preferences com JSON inválido
-- Name vazio ou muito longo
-- Concorrência (2 PATCH simultâneos)
-- Avatar com tipo inválido, tamanho > 5MB, dimensões inválidas
+- Preferences com valores inválidos (theme="invalid")
+- Name vazio ou muito longo (>100 chars)
+- ProfileImageUrl com URL inválida
 
 ### Próximos passos
 1. Responder perguntas da seção 2
