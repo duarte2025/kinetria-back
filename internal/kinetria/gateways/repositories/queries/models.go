@@ -73,6 +73,7 @@ type User struct {
 	Name            string         `json:"name"`
 	PasswordHash    string         `json:"password_hash"`
 	ProfileImageUrl sql.NullString `json:"profile_image_url"`
+	Preferences     []byte         `json:"preferences"`
 	CreatedAt       time.Time      `json:"created_at"`
 	UpdatedAt       time.Time      `json:"updated_at"`
 }
