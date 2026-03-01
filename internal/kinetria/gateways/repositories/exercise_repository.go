@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/entities"
@@ -75,7 +76,10 @@ func (r *ExerciseRepository) List(ctx context.Context, filters ports.ExerciseFil
 
 	exercises := make([]*entities.Exercise, 0, len(rows))
 	for _, row := range rows {
-		e := mapSQLCLibraryExerciseToEntity(row)
+		e, err := mapSQLCLibraryExerciseToEntity(row)
+		if err != nil {
+			return nil, 0, err
+		}
 		exercises = append(exercises, &e)
 	}
 
@@ -91,7 +95,10 @@ func (r *ExerciseRepository) GetByID(ctx context.Context, exerciseID uuid.UUID) 
 		}
 		return nil, err
 	}
-	e := mapSQLCLibraryExerciseToEntity(row)
+	e, err := mapSQLCLibraryExerciseToEntity(row)
+	if err != nil {
+		return nil, err
+	}
 	return &e, nil
 }
 
@@ -163,10 +170,14 @@ func (r *ExerciseRepository) GetHistory(ctx context.Context, userID, exerciseID 
 			sessionIndex[row.SessionID] = idx
 		}
 		w := int(row.Weight)
+		var weightPtr *int
+		if w != 0 {
+			weightPtr = &w
+		}
 		entries[idx].Sets = append(entries[idx].Sets, ports.SetDetail{
 			SetNumber: int(row.SetNumber),
 			Reps:      int(row.Reps),
-			Weight:    &w,
+			Weight:    weightPtr,
 			Status:    row.Status,
 		})
 	}
@@ -183,10 +194,12 @@ func toNullString(s *string) sql.NullString {
 }
 
 // mapSQLCLibraryExerciseToEntity converts a queries.Exercise to entities.Exercise for library use.
-func mapSQLCLibraryExerciseToEntity(row queries.Exercise) entities.Exercise {
+func mapSQLCLibraryExerciseToEntity(row queries.Exercise) (entities.Exercise, error) {
 	var muscles []string
 	if len(row.Muscles) > 0 {
-		_ = json.Unmarshal(row.Muscles, &muscles)
+		if err := json.Unmarshal(row.Muscles, &muscles); err != nil {
+			return entities.Exercise{}, fmt.Errorf("failed to parse muscles JSON for exercise %s: %w", row.ID, err)
+		}
 	}
 
 	e := entities.Exercise{
@@ -215,5 +228,5 @@ func mapSQLCLibraryExerciseToEntity(row queries.Exercise) entities.Exercise {
 		e.VideoURL = &row.VideoUrl.String
 	}
 
-	return e
+	return e, nil
 }

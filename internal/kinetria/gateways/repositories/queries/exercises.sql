@@ -65,21 +65,28 @@ JOIN set_records sr ON sr.session_id = s.id AND sr.workout_exercise_id = we.id
 WHERE s.user_id = $2 AND s.status = 'completed';
 
 -- name: GetExerciseHistory :many
+WITH paginated_sessions AS (
+    SELECT DISTINCT s.id AS session_id, s.workout_id, s.started_at
+    FROM sessions s
+    JOIN workout_exercises we ON we.workout_id = s.workout_id AND we.exercise_id = $1
+    JOIN set_records sr ON sr.session_id = s.id AND sr.workout_exercise_id = we.id
+    WHERE s.user_id = $2 AND s.status = 'completed'
+    ORDER BY s.started_at DESC
+    LIMIT $3 OFFSET $4
+)
 SELECT
-    s.id           AS session_id,
-    w.name         AS workout_name,
-    s.started_at   AS performed_at,
+    ps.session_id,
+    w.name          AS workout_name,
+    ps.started_at   AS performed_at,
     sr.set_number,
     sr.reps,
     sr.weight,
     sr.status
-FROM sessions s
-JOIN workouts w ON s.workout_id = w.id
-JOIN workout_exercises we ON we.workout_id = s.workout_id AND we.exercise_id = $1
-JOIN set_records sr ON sr.session_id = s.id AND sr.workout_exercise_id = we.id
-WHERE s.user_id = $2 AND s.status = 'completed'
-ORDER BY s.started_at DESC, sr.set_number ASC
-LIMIT $3 OFFSET $4;
+FROM paginated_sessions ps
+JOIN workouts w ON ps.workout_id = w.id
+JOIN workout_exercises we ON we.workout_id = ps.workout_id AND we.exercise_id = $1
+JOIN set_records sr ON sr.session_id = ps.session_id AND sr.workout_exercise_id = we.id
+ORDER BY ps.started_at DESC, sr.set_number ASC;
 
 -- name: CountExerciseHistory :one
 SELECT COUNT(DISTINCT s.id)
