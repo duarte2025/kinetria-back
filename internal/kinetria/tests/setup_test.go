@@ -14,6 +14,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	domainauth "github.com/kinetria/kinetria-back/internal/kinetria/domain/auth"
 	domaindashboard "github.com/kinetria/kinetria-back/internal/kinetria/domain/dashboard"
+	domainexercises "github.com/kinetria/kinetria-back/internal/kinetria/domain/exercises"
 	domainprofile "github.com/kinetria/kinetria-back/internal/kinetria/domain/profile"
 	domainsessions "github.com/kinetria/kinetria-back/internal/kinetria/domain/sessions"
 	domainworkouts "github.com/kinetria/kinetria-back/internal/kinetria/domain/workouts"
@@ -103,14 +104,19 @@ func SetupTestServer(t *testing.T) *TestServer {
 	getProfileUC := domainprofile.NewGetProfileUC(tracer, userRepo)
 	updateProfileUC := domainprofile.NewUpdateProfileUC(tracer, userRepo)
 
+	listExercisesUC := domainexercises.NewListExercisesUC(exerciseRepo)
+	getExerciseUC := domainexercises.NewGetExerciseUC(exerciseRepo)
+	getExerciseHistoryUC := domainexercises.NewGetExerciseHistoryUC(exerciseRepo)
+
 	authHandler := service.NewAuthHandler(registerUC, loginUC, refreshTokenUC, logoutUC, jwtManager, validate)
 	sessionsHandler := service.NewSessionsHandler(startSessionUC, recordSetUC, finishSessionUC, abandonSessionUC)
 	workoutsHandler := service.NewWorkoutsHandler(listWorkoutsUC, getWorkoutUC, jwtManager)
 	dashboardHandler := service.NewDashboardHandler(getUserProfileUC, getTodayWorkoutUC, getWeekProgressUC, getWeekStatsUC)
 	profileHandler := service.NewProfileHandler(getProfileUC, updateProfileUC)
+	exercisesHandler := service.NewExercisesHandler(listExercisesUC, getExerciseUC, getExerciseHistoryUC, jwtManager)
 
 	router := chi.NewRouter()
-	serviceRouter := service.NewServiceRouter(authHandler, sessionsHandler, workoutsHandler, dashboardHandler, profileHandler, jwtManager)
+	serviceRouter := service.NewServiceRouter(authHandler, sessionsHandler, workoutsHandler, dashboardHandler, profileHandler, exercisesHandler, jwtManager)
 	router.Route(serviceRouter.Pattern(), serviceRouter.Router)
 
 	httpServer := httptest.NewServer(router)
