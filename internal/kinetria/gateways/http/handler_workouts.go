@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -10,6 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/entities"
+	domerrors "github.com/kinetria/kinetria-back/internal/kinetria/domain/errors"
 	domainworkouts "github.com/kinetria/kinetria-back/internal/kinetria/domain/workouts"
 	gatewayauth "github.com/kinetria/kinetria-back/internal/kinetria/gateways/auth"
 )
@@ -130,23 +132,95 @@ func mapWorkoutToFullDTO(w entities.Workout, exercises []entities.Exercise) Work
 	return dto
 }
 
+// Request DTOs
+
+type WorkoutExerciseRequest struct {
+	ExerciseID string `json:"exerciseId"`
+	Sets       int    `json:"sets"`
+	Reps       string `json:"reps"`
+	RestTime   int    `json:"restTime"`
+	Weight     *int   `json:"weight"`
+	OrderIndex int    `json:"orderIndex"`
+}
+
+type CreateWorkoutRequest struct {
+	Name        string                   `json:"name"`
+	Description *string                  `json:"description"`
+	Type        string                   `json:"type"`
+	Intensity   string                   `json:"intensity"`
+	Duration    int                      `json:"duration"`
+	ImageURL    *string                  `json:"imageUrl"`
+	Exercises   []WorkoutExerciseRequest `json:"exercises"`
+}
+
+type UpdateWorkoutRequest struct {
+	Name        *string                  `json:"name"`
+	Description *string                  `json:"description"`
+	Type        *string                  `json:"type"`
+	Intensity   *string                  `json:"intensity"`
+	Duration    *int                     `json:"duration"`
+	ImageURL    *string                  `json:"imageUrl"`
+	Exercises   []WorkoutExerciseRequest `json:"exercises"`
+}
+
 // WorkoutsHandler handles HTTP requests for workouts endpoints.
 type WorkoutsHandler struct {
-	listWorkoutsUC *domainworkouts.ListWorkoutsUC
-	getWorkoutUC   *domainworkouts.GetWorkoutUC
-	jwtManager     *gatewayauth.JWTManager
+	listWorkoutsUC  *domainworkouts.ListWorkoutsUC
+	getWorkoutUC    *domainworkouts.GetWorkoutUC
+	createWorkoutUC *domainworkouts.CreateWorkoutUC
+	updateWorkoutUC *domainworkouts.UpdateWorkoutUC
+	deleteWorkoutUC *domainworkouts.DeleteWorkoutUC
+	jwtManager      *gatewayauth.JWTManager
 }
 
 // NewWorkoutsHandler creates a new WorkoutsHandler.
 func NewWorkoutsHandler(
 	listWorkoutsUC *domainworkouts.ListWorkoutsUC,
 	getWorkoutUC *domainworkouts.GetWorkoutUC,
+	createWorkoutUC *domainworkouts.CreateWorkoutUC,
+	updateWorkoutUC *domainworkouts.UpdateWorkoutUC,
+	deleteWorkoutUC *domainworkouts.DeleteWorkoutUC,
 	jwtManager *gatewayauth.JWTManager,
 ) *WorkoutsHandler {
 	return &WorkoutsHandler{
-		listWorkoutsUC: listWorkoutsUC,
-		getWorkoutUC:   getWorkoutUC,
-		jwtManager:     jwtManager,
+		listWorkoutsUC:  listWorkoutsUC,
+		getWorkoutUC:    getWorkoutUC,
+		createWorkoutUC: createWorkoutUC,
+		updateWorkoutUC: updateWorkoutUC,
+		deleteWorkoutUC: deleteWorkoutUC,
+		jwtManager:      jwtManager,
+	}
+}
+
+func mapExerciseRequestToInput(req WorkoutExerciseRequest) (domainworkouts.WorkoutExerciseInput, error) {
+	exerciseID, err := uuid.Parse(req.ExerciseID)
+	if err != nil {
+		return domainworkouts.WorkoutExerciseInput{}, fmt.Errorf("invalid exerciseId '%s': must be a valid UUID", req.ExerciseID)
+	}
+	return domainworkouts.WorkoutExerciseInput{
+		ExerciseID: exerciseID,
+		Sets:       req.Sets,
+		Reps:       req.Reps,
+		RestTime:   req.RestTime,
+		Weight:     req.Weight,
+		OrderIndex: req.OrderIndex,
+	}, nil
+}
+
+func mapDomainErrorToHTTP(err error) (int, string, string) {
+	switch {
+	case errors.Is(err, domerrors.ErrWorkoutNotFound):
+		return http.StatusNotFound, "WORKOUT_NOT_FOUND", "Workout not found."
+	case errors.Is(err, domerrors.ErrForbidden):
+		return http.StatusForbidden, "FORBIDDEN", "You do not have permission to perform this action."
+	case errors.Is(err, domerrors.ErrCannotModifyTemplate):
+		return http.StatusForbidden, "CANNOT_MODIFY_TEMPLATE", "Cannot modify or delete template workouts."
+	case errors.Is(err, domerrors.ErrWorkoutHasActiveSessions):
+		return http.StatusConflict, "WORKOUT_HAS_ACTIVE_SESSIONS", "Cannot delete workout with active sessions."
+	case errors.Is(err, domerrors.ErrMalformedParameters):
+		return http.StatusBadRequest, "VALIDATION_ERROR", err.Error()
+	default:
+		return http.StatusInternalServerError, "INTERNAL_ERROR", "An unexpected error occurred."
 	}
 }
 
@@ -276,6 +350,174 @@ func (h *WorkoutsHandler) GetWorkout(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(ApiResponseDTO{
 		Data: dto,
 	})
+}
+
+// CreateWorkout godoc
+// @Summary Create a new workout
+// @Description Creates a new workout with exercises for the authenticated user
+// @Tags workouts
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param body body CreateWorkoutRequest true "Workout data"
+// @Success 201 {object} ApiResponseDTO{data=WorkoutSummaryDTO}
+// @Failure 400 {object} ErrorResponse "Validation error"
+// @Failure 401 {object} ErrorResponse "Unauthorized"
+// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Router /api/v1/workouts [post]
+func (h *WorkoutsHandler) CreateWorkout(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	userID, err := h.extractUserIDFromJWT(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Invalid or expired access token.")
+		return
+	}
+
+	var req CreateWorkoutRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_BODY", "Invalid request body.")
+		return
+	}
+
+	exercises := make([]domainworkouts.WorkoutExerciseInput, len(req.Exercises))
+	for i, ex := range req.Exercises {
+		exInput, err := mapExerciseRequestToInput(ex)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+			return
+		}
+		exercises[i] = exInput
+	}
+
+	workout, err := h.createWorkoutUC.Execute(ctx, userID, domainworkouts.CreateWorkoutInput{
+		Name:        req.Name,
+		Description: req.Description,
+		Type:        req.Type,
+		Intensity:   req.Intensity,
+		Duration:    req.Duration,
+		ImageURL:    req.ImageURL,
+		Exercises:   exercises,
+	})
+	if err != nil {
+		statusCode, errCode, msg := mapDomainErrorToHTTP(err)
+		writeError(w, statusCode, errCode, msg)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	_ = json.NewEncoder(w).Encode(ApiResponseDTO{Data: mapWorkoutToSummaryDTO(*workout)})
+}
+
+// UpdateWorkout godoc
+// @Summary Update a workout
+// @Description Updates a workout owned by the authenticated user
+// @Tags workouts
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Workout ID (UUID)"
+// @Param body body UpdateWorkoutRequest true "Workout data"
+// @Success 200 {object} ApiResponseDTO{data=WorkoutSummaryDTO}
+// @Failure 400 {object} ErrorResponse "Validation error"
+// @Failure 401 {object} ErrorResponse "Unauthorized"
+// @Failure 403 {object} ErrorResponse "Forbidden"
+// @Failure 404 {object} ErrorResponse "Workout not found"
+// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Router /api/v1/workouts/{id} [put]
+func (h *WorkoutsHandler) UpdateWorkout(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	userID, err := h.extractUserIDFromJWT(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Invalid or expired access token.")
+		return
+	}
+
+	workoutIDStr := chi.URLParam(r, "id")
+	workoutID, err := uuid.Parse(workoutIDStr)
+	if err != nil {
+		writeError(w, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "workoutId must be a valid UUID")
+		return
+	}
+
+	var req UpdateWorkoutRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_BODY", "Invalid request body.")
+		return
+	}
+
+	var exercises []domainworkouts.WorkoutExerciseInput
+	if len(req.Exercises) > 0 {
+		exercises = make([]domainworkouts.WorkoutExerciseInput, len(req.Exercises))
+		for i, ex := range req.Exercises {
+			exInput, err := mapExerciseRequestToInput(ex)
+			if err != nil {
+				writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+				return
+			}
+			exercises[i] = exInput
+		}
+	}
+
+	workout, err := h.updateWorkoutUC.Execute(ctx, userID, workoutID, domainworkouts.UpdateWorkoutInput{
+		Name:        req.Name,
+		Description: req.Description,
+		Type:        req.Type,
+		Intensity:   req.Intensity,
+		Duration:    req.Duration,
+		ImageURL:    req.ImageURL,
+		Exercises:   exercises,
+	})
+	if err != nil {
+		statusCode, errCode, msg := mapDomainErrorToHTTP(err)
+		writeError(w, statusCode, errCode, msg)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(ApiResponseDTO{Data: mapWorkoutToSummaryDTO(*workout)})
+}
+
+// DeleteWorkout godoc
+// @Summary Delete a workout
+// @Description Soft-deletes a workout owned by the authenticated user
+// @Tags workouts
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Workout ID (UUID)"
+// @Success 204 "No Content"
+// @Failure 401 {object} ErrorResponse "Unauthorized"
+// @Failure 403 {object} ErrorResponse "Forbidden"
+// @Failure 404 {object} ErrorResponse "Workout not found"
+// @Failure 409 {object} ErrorResponse "Workout has active sessions"
+// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Router /api/v1/workouts/{id} [delete]
+func (h *WorkoutsHandler) DeleteWorkout(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	userID, err := h.extractUserIDFromJWT(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Invalid or expired access token.")
+		return
+	}
+
+	workoutIDStr := chi.URLParam(r, "id")
+	workoutID, err := uuid.Parse(workoutIDStr)
+	if err != nil {
+		writeError(w, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "workoutId must be a valid UUID")
+		return
+	}
+
+	if err := h.deleteWorkoutUC.Execute(ctx, userID, workoutID); err != nil {
+		statusCode, errCode, msg := mapDomainErrorToHTTP(err)
+		writeError(w, statusCode, errCode, msg)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *WorkoutsHandler) extractUserIDFromJWT(r *http.Request) (uuid.UUID, error) {
