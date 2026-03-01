@@ -52,12 +52,12 @@ type updateProfileRequest struct {
 
 // HandleGetProfile godoc
 // @Summary Get user profile
-// @Description Get the authenticated user's profile
+// @Description Get the authenticated user's profile information including preferences.
 // @Tags profile
 // @Produce json
 // @Security BearerAuth
-// @Success 200 {object} SuccessResponse{data=profileResponse}
-// @Failure 401 {object} ErrorResponse "Unauthorized"
+// @Success 200 {object} SuccessResponse{data=ProfileResponse} "Profile retrieved successfully"
+// @Failure 401 {object} ErrorResponse "Unauthorized — JWT token missing or invalid"
 // @Failure 404 {object} ErrorResponse "User not found"
 // @Failure 500 {object} ErrorResponse "Internal server error"
 // @Router /api/v1/profile [get]
@@ -101,15 +101,17 @@ func (h *ProfileHandler) HandleGetProfile(w http.ResponseWriter, r *http.Request
 
 // HandleUpdateProfile godoc
 // @Summary Update user profile
-// @Description Update the authenticated user's profile (partial update)
+// @Description Partially update the authenticated user's profile. Only the fields provided in the request body are changed.
+// @Description Validation rules: name must be 2–100 characters; preferences.theme must be "dark" or "light";
+// @Description preferences.language must be "pt-BR" or "en-US". At least one field must be provided.
 // @Tags profile
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param request body updateProfileRequest true "Profile update fields"
-// @Success 200 {object} SuccessResponse{data=profileResponse}
-// @Failure 400 {object} ErrorResponse "Validation error"
-// @Failure 401 {object} ErrorResponse "Unauthorized"
+// @Param request body UpdateProfileRequestSwagger true "Profile fields to update (at least one required)"
+// @Success 200 {object} SuccessResponse{data=ProfileResponse} "Profile updated successfully"
+// @Failure 400 {object} ErrorResponse "Validation error — invalid field values or no fields provided"
+// @Failure 401 {object} ErrorResponse "Unauthorized — JWT token missing or invalid"
 // @Failure 404 {object} ErrorResponse "User not found"
 // @Failure 500 {object} ErrorResponse "Internal server error"
 // @Router /api/v1/profile [patch]

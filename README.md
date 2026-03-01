@@ -165,6 +165,8 @@ make swagger
 | POST | `/api/v1/sessions/{id}/sets` | Registrar série executada (requer autenticação) |
 | PATCH | `/api/v1/sessions/{id}/finish` | Finalizar sessão (requer autenticação) |
 | PATCH | `/api/v1/sessions/{id}/abandon` | Abandonar sessão (requer autenticação) |
+| GET | `/api/v1/profile` | Obter perfil do usuário autenticado (requer autenticação) |
+| PATCH | `/api/v1/profile` | Atualizar perfil parcialmente (requer autenticação) |
 
 ### Exemplo de resposta
 
@@ -324,6 +326,109 @@ curl -X GET "http://localhost:8080/api/v1/workouts/a1b2c3d4-e5f6-7890-abcd-ef123
 - `reps` pode ser um número fixo ou range (ex: "8-12")
 - `muscles` é uma lista de strings com os músculos trabalhados
 - `restTime` é o tempo de descanso recomendado em segundos
+
+### Profile
+
+Consultar e atualizar o perfil do usuário autenticado.
+
+#### GET /api/v1/profile
+
+Retorna os dados do perfil do usuário autenticado.
+
+**Autenticação**: Obrigatória (JWT Bearer)
+
+**Exemplo de Requisição**:
+```bash
+curl -X GET http://localhost:8080/api/v1/profile \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Exemplo de Resposta (200 OK)**:
+```json
+{
+  "data": {
+    "id": "b67a784a-e54b-4330-9b6b-8dd930c4a746",
+    "name": "Bruno Costa",
+    "email": "bruno@example.com",
+    "profileImageUrl": "https://cdn.kinetria.app/avatars/bruno.jpg",
+    "preferences": {
+      "theme": "dark",
+      "language": "pt-BR"
+    }
+  }
+}
+```
+
+> Quando o usuário não possui imagem de perfil, `profileImageUrl` é retornado como `null`.
+
+**Possíveis Erros**:
+- `401 Unauthorized` - Token JWT inválido ou ausente
+- `404 Not Found` - Usuário não encontrado
+- `500 Internal Error` - Erro interno do servidor
+
+---
+
+#### PATCH /api/v1/profile
+
+Atualiza parcialmente o perfil do usuário autenticado. Apenas os campos enviados no corpo da requisição são alterados.
+
+**Autenticação**: Obrigatória (JWT Bearer)
+
+**Regras de Validação**:
+- `name`: 2–100 caracteres (espaços nas extremidades são removidos); obrigatório se fornecido
+- `preferences.theme`: deve ser `"dark"` ou `"light"`
+- `preferences.language`: deve ser `"pt-BR"` ou `"en-US"`
+- Pelo menos um campo deve ser fornecido
+
+**Exemplo de Requisição — atualizar nome**:
+```bash
+curl -X PATCH http://localhost:8080/api/v1/profile \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Bruno C."}'
+```
+
+**Exemplo de Requisição — atualizar preferências**:
+```bash
+curl -X PATCH http://localhost:8080/api/v1/profile \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"preferences": {"theme": "light", "language": "en-US"}}'
+```
+
+**Exemplo de Requisição — atualizar múltiplos campos**:
+```bash
+curl -X PATCH http://localhost:8080/api/v1/profile \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Bruno Costa",
+    "profileImageUrl": "https://cdn.kinetria.app/avatars/bruno.jpg",
+    "preferences": {"theme": "dark", "language": "pt-BR"}
+  }'
+```
+
+**Exemplo de Resposta (200 OK)**:
+```json
+{
+  "data": {
+    "id": "b67a784a-e54b-4330-9b6b-8dd930c4a746",
+    "name": "Bruno Costa",
+    "email": "bruno@example.com",
+    "profileImageUrl": "https://cdn.kinetria.app/avatars/bruno.jpg",
+    "preferences": {
+      "theme": "dark",
+      "language": "pt-BR"
+    }
+  }
+}
+```
+
+**Possíveis Erros**:
+- `400 Bad Request` - Nenhum campo fornecido, nome inválido (muito curto/longo) ou preferências com valores não permitidos
+- `401 Unauthorized` - Token JWT inválido ou ausente
+- `404 Not Found` - Usuário não encontrado
+- `500 Internal Error` - Erro interno do servidor
 
 ## Testes
 

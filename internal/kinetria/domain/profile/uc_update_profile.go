@@ -13,27 +13,47 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// UpdateProfileInput holds the optional fields for profile update.
-// A nil pointer means "not provided" (field should not be changed).
+// UpdateProfileInput holds the optional fields for a profile update.
+// A nil pointer means "not provided" — the corresponding field will not be changed.
+//
+// Validation rules (enforced by [UpdateProfileUC.Execute]):
+//   - Name: 2–100 characters after whitespace trimming.
+//   - Preferences: [vos.UserPreferences.Validate] must pass (theme/language must be
+//     one of their allowed values).
 type UpdateProfileInput struct {
-	Name            *string
+	// Name, when non-nil, replaces the user's display name.
+	Name *string
+	// ProfileImageURL, when non-nil, replaces the user's profile image URL.
 	ProfileImageURL *string
-	Preferences     *vos.UserPreferences
+	// Preferences, when non-nil, replaces the user's preferences entirely.
+	Preferences *vos.UserPreferences
 }
 
 // UpdateProfileUC implements the use case for updating a user's profile.
+// It performs a partial update: only fields explicitly set (non-nil) in
+// [UpdateProfileInput] are written to the repository.
 type UpdateProfileUC struct {
 	tracer   trace.Tracer
 	userRepo ports.UserRepository
 }
 
-// NewUpdateProfileUC creates a new UpdateProfileUC.
+// NewUpdateProfileUC creates a new [UpdateProfileUC] wired with the given tracer and repository.
 func NewUpdateProfileUC(tracer trace.Tracer, userRepo ports.UserRepository) *UpdateProfileUC {
 	return &UpdateProfileUC{tracer: tracer, userRepo: userRepo}
 }
 
-// Execute updates the user profile with the provided fields.
-// Only non-nil fields are updated. Returns the updated user.
+// Execute updates the profile of the user identified by userID.
+//
+// Only non-nil fields in input are applied. At least one field must be provided;
+// otherwise the call returns [domainerrors.ErrMalformedParameters].
+//
+// Possible errors:
+//   - [domainerrors.ErrMalformedParameters] — no fields provided, name too short/long,
+//     or preferences contain invalid theme/language values.
+//   - [domainerrors.ErrNotFound] — no user with the given userID exists.
+//   - Any repository error on infrastructure failures.
+//
+// On success the returned [entities.User] reflects all applied changes.
 func (uc *UpdateProfileUC) Execute(ctx context.Context, userID uuid.UUID, input UpdateProfileInput) (*entities.User, error) {
 	ctx, span := uc.tracer.Start(ctx, "UpdateProfileUC")
 	defer span.End()

@@ -162,3 +162,30 @@ type SessionStatusResponse struct {
 	Status     string `json:"status" example:"completed"`
 	FinishedAt string `json:"finishedAt" example:"2026-02-25T16:15:00Z"`
 }
+
+// UserPreferencesSwagger represents user preferences in profile request/response
+type UserPreferencesSwagger struct {
+	// Theme is the UI theme; valid values: "dark", "light"
+	Theme string `json:"theme" example:"dark" enums:"dark,light"`
+	// Language is the display language; valid values: "pt-BR", "en-US"
+	Language string `json:"language" example:"pt-BR" enums:"pt-BR,en-US"`
+}
+
+// ProfileResponse represents the user profile in API responses
+type ProfileResponse struct {
+	ID              string                 `json:"id" example:"b67a784a-e54b-4330-9b6b-8dd930c4a746"`
+	Name            string                 `json:"name" example:"Bruno Costa"`
+	Email           string                 `json:"email" example:"bruno@example.com"`
+	ProfileImageURL *string                `json:"profileImageUrl" example:"https://cdn.kinetria.app/avatars/bruno.jpg"`
+	Preferences     UserPreferencesSwagger `json:"preferences"`
+}
+
+// UpdateProfileRequestSwagger represents the request body for PATCH /profile
+type UpdateProfileRequestSwagger struct {
+	// Name, when provided, must have 2–100 characters
+	Name *string `json:"name" example:"Bruno Costa"`
+	// ProfileImageURL, when provided, replaces the current profile image URL
+	ProfileImageURL *string `json:"profileImageUrl" example:"https://cdn.kinetria.app/avatars/bruno.jpg"`
+	// Preferences, when provided, replaces the user's full preferences object
+	Preferences *UserPreferencesSwagger `json:"preferences"`
+}
