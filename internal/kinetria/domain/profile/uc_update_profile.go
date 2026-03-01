@@ -63,16 +63,16 @@ func (uc *UpdateProfileUC) Execute(ctx context.Context, userID uuid.UUID, input 
 		return nil, fmt.Errorf("%w: at least one field must be provided", domainerrors.ErrMalformedParameters)
 	}
 
-	// Validate name if provided
+	// Validate name if provided; trimmedName holds the sanitized value.
+	var trimmedName string
 	if input.Name != nil {
-		name := strings.TrimSpace(*input.Name)
-		if len(name) < 2 {
+		trimmedName = strings.TrimSpace(*input.Name)
+		if len(trimmedName) < 2 {
 			return nil, fmt.Errorf("%w: name must be at least 2 characters", domainerrors.ErrMalformedParameters)
 		}
-		if len(name) > 100 {
+		if len(trimmedName) > 100 {
 			return nil, fmt.Errorf("%w: name must be at most 100 characters", domainerrors.ErrMalformedParameters)
 		}
-		*input.Name = name
 	}
 
 	// Validate preferences if provided
@@ -90,7 +90,7 @@ func (uc *UpdateProfileUC) Execute(ctx context.Context, userID uuid.UUID, input 
 
 	// Apply updates (partial update pattern)
 	if input.Name != nil {
-		user.Name = *input.Name
+		user.Name = trimmedName
 	}
 	if input.ProfileImageURL != nil {
 		user.ProfileImageURL = *input.ProfileImageURL

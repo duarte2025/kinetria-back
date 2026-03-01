@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -100,7 +101,9 @@ func rowToUser(id uuid.UUID, name, email, passwordHash string, profileImageUrl s
 	}
 	prefs := vos.DefaultUserPreferences()
 	if len(preferencesJSON) > 0 {
-		_ = json.Unmarshal(preferencesJSON, &prefs)
+		if err := json.Unmarshal(preferencesJSON, &prefs); err != nil {
+			slog.Warn("failed to unmarshal user preferences, using defaults", "error", err)
+		}
 	}
 	return &entities.User{
 		ID:              id,
