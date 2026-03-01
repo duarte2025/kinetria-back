@@ -16,23 +16,23 @@ Implementar 3 endpoints de biblioteca de exercícios:
 
 ---
 
-## 2) Clarifying Questions (para o dev)
+## 2) Decisions Made
 
 ### Persistência
-1. **Tabela `exercises` completa?** Já tem todos os campos (description, instructions, tips, difficulty, equipment, video_url, muscles)?
-2. **Seed de exercícios:** Quantos exercícios popular inicialmente? 50? 100? Quem vai criar o conteúdo (textos, imagens)?
-3. **Campo `muscles`:** Armazenar como array (TEXT[]) ou JSONB? Valores permitidos (enum)?
+1. **Tabela `exercises` completa?** Não. Criar migration 011 para adicionar: `description`, `instructions`, `tips`, `difficulty`, `equipment`, `video_url`.
+2. **Seed de exercícios:** 30-40 exercícios mais comuns. Conteúdo genérico/público. URLs mock por enquanto.
+3. **Campo `muscles`:** TEXT[] (já existe). Valores livres, enum pode vir depois.
 
 ### Interface / Contrato
-4. **Filtros obrigatórios:** Quais filtros são essenciais para MVP? (muscleGroup, equipment, difficulty, search text?)
-5. **Paginação padrão:** Confirmar defaults (page=1, limit=20, max=100)?
-6. **Search:** Buscar apenas em `name` ou também em `description`?
-7. **History:** Mostrar todas as execuções ou apenas "best sets" (maior peso)?
+4. **Filtros obrigatórios:** `muscleGroup` (essencial), `search` (essencial), `equipment` (opcional), `difficulty` (opcional).
+5. **Paginação padrão:** page=1, pageSize=20, max=100 (padrão do projeto).
+6. **Search:** Apenas `name` com ILIKE. Full-text search em description fica para v2.
+7. **History:** Todas as execuções agrupadas por session. Mostrar todos os sets.
 
 ### Regras de Negócio
-8. **User stats em GET /exercises/:id:** Quais métricas mostrar? (last performed, best weight, total times performed, average weight?)
-9. **History ordenação:** Mais recente primeiro ou mais antigo primeiro?
-10. **History paginação:** Limitar a últimas 50 execuções? Ou paginar?
+8. **User stats em GET /exercises/:id:** `lastPerformed`, `bestWeight`, `timesPerformed`, `averageWeight` (últimas 10 execuções).
+9. **History ordenação:** Mais recente primeiro (DESC).
+10. **History paginação:** Paginar (page=1, pageSize=20). Sem limite fixo, usuário navega todo histórico.
 
 ---
 
@@ -659,18 +659,23 @@ fx.Provide(
 - Biblioteca de exercícios é read-only (usuários não criam exercícios)
 - GET /exercises e GET /exercises/:id são públicos (ou autenticação opcional)
 - GET /exercises/:id/history requer autenticação
-- Seed inicial com 20-30 exercícios mais comuns
+- Seed inicial com 30-40 exercícios mais comuns
 - URLs de imagens/vídeos são mock por enquanto
+- Campo `muscles` como TEXT[] com valores livres
+- Search apenas em `name` (ILIKE), não em description
+- History mostra todas execuções (não apenas best sets), paginado
 
 ### Dependências
-- **Decisão de negócio:**
-  - Quantos exercícios no seed inicial?
-  - Quem vai criar conteúdo (descrições, instruções, dicas)?
-  - Exercícios públicos ou apenas para usuários autenticados?
+- **Decisões implementadas:**
+  - Migration 011: adicionar campos faltantes em `exercises`
+  - Seed com 30-40 exercícios (conteúdo genérico)
+  - Filtros: muscleGroup e search (essenciais), equipment e difficulty (opcionais)
+  - User stats: lastPerformed, bestWeight, timesPerformed, averageWeight
+  - History: todas execuções, paginado, ordenado por mais recente
 - **Decisão técnica:**
-  - Onde hospedar imagens/vídeos? (CDN, S3, mock?)
-  - Campo `muscles` como TEXT[] ou JSONB?
-  - Valores permitidos para `difficulty` e `equipment` (enum?)
+  - URLs de imagens/vídeos mock (CDN/S3 fica para depois)
+  - Campo `muscles` como TEXT[] (valores livres)
+  - Search apenas em name (ILIKE)
 
 ### Recomendações para Plano de Testes
 
