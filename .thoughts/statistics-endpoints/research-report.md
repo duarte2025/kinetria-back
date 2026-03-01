@@ -17,22 +17,22 @@ Implementar 4 endpoints de estatísticas do usuário:
 
 ---
 
-## 2) Clarifying Questions (para o dev)
+## 2) Decisions Made
 
 ### Regras de Negócio
-1. **Personal Record:** Como definir? Maior peso para mesmo número de reps? Ou maior volume total (peso × reps × sets)?
-2. **Streak:** Considerar apenas dias consecutivos? Permitir 1 dia de "folga" (ex: treinar seg-qua-sex conta como streak de 3)?
-3. **Progression metric:** Qual métrica principal? Volume total (peso × reps)? Peso máximo? Reps máximas?
+1. **Personal Record:** Maior peso para o mesmo exercício (desempate: mais reps, depois mais recente). Retornar apenas o exercício mais utilizado por grupo muscular (top 10-15 PRs total).
+2. **Streak:** Apenas dias consecutivos (sem folga). Streak quebra se passar 1 dia sem treinar.
+3. **Progression metric:** Volume total (peso × reps) como métrica principal. Peso máximo como métrica secundária.
 
 ### Interface / Contrato
-4. **Período padrão:** Se não informar `startDate`/`endDate`, usar qual período? Últimos 30 dias? Últimos 90 dias? Desde o início?
-5. **Filtros em progression:** Permitir filtrar por exercício específico? Por muscle group?
-6. **Paginação em personal-records:** Limitar a top 10? Ou paginar?
+4. **Período padrão:** Últimos 30 dias se não informar `startDate`/`endDate`.
+5. **Filtros em progression:** Permitir filtrar por exercício específico (`exerciseId` query param). Muscle group fica para v2.
+6. **Paginação em personal-records:** Top 15 sem paginação (1-2 exercícios por grupo muscular).
 
 ### Performance / NFRs
-7. **Volumetria esperada:** Quantas sessions por usuário em média? Quantos set_records por session?
-8. **Cache:** Stats de overview podem ser cacheadas? TTL de quanto tempo?
-9. **Limite de período:** Limitar range máximo de datas (ex: 2 anos) para evitar queries lentas?
+7. **Volumetria esperada:** ~100 sessions por usuário ativo, ~50 set_records por session. Queries devem suportar até 1000 sessions.
+8. **Cache:** Não implementar na v1. Adicionar depois se necessário (TTL 5min).
+9. **Limite de período:** Máximo 2 anos (730 dias). Retornar 400 se período maior.
 
 ---
 
@@ -251,18 +251,16 @@ ORDER BY date;
 Adicionar queries:
 ```sql
 -- name: GetPersonalRecordsByUser :many
-WITH ranked_sets AS (
+-- Retorna apenas o exercício mais usado por grupo muscular (top 15 PRs)
+WITH exercise_frequency AS (
     SELECT 
         we.exercise_id,
         e.name as exercise_name,
-        sr.weight,
-        sr.reps,
-        (sr.weight * sr.reps) as volume,
-        sr.created_at,
-        ROW_NUMBER() OVER (
-            PARTITION BY we.exercise_id 
-            ORDER BY sr.weight DESC, sr.reps DESC, sr.created_at DESC
-        ) as rank
+        e.muscles[1] as primary_muscle,
+        COUNT(DISTINCT s.id) as times_used,
+        MAX(sr.weight) as best_weight,
+        MAX(sr.reps) FILTER (WHERE sr.weight = MAX(sr.weight)) as best_reps,
+        MAX(sr.created_at) FILTER (WHERE sr.weight = MAX(sr.weight)) as achieved_at
     FROM set_records sr
     JOIN sessions s ON sr.session_id = s.id
     JOIN workout_exercises we ON sr.workout_exercise_id = we.id
@@ -271,17 +269,27 @@ WITH ranked_sets AS (
       AND s.status = 'completed'
       AND sr.status = 'completed'
       AND sr.weight IS NOT NULL
+    GROUP BY we.exercise_id, e.name, e.muscles[1]
+),
+ranked_by_muscle AS (
+    SELECT *,
+        ROW_NUMBER() OVER (
+            PARTITION BY primary_muscle 
+            ORDER BY times_used DESC, best_weight DESC
+        ) as rank_in_muscle
+    FROM exercise_frequency
 )
 SELECT 
     exercise_id,
     exercise_name,
-    weight,
-    reps,
-    volume,
-    created_at as achieved_at
-FROM ranked_sets
-WHERE rank = 1
-ORDER BY volume DESC;
+    best_weight as weight,
+    best_reps as reps,
+    (best_weight * best_reps) as volume,
+    achieved_at
+FROM ranked_by_muscle
+WHERE rank_in_muscle = 1
+ORDER BY best_weight DESC
+LIMIT 15;
 
 -- name: GetProgressionByUserAndExercise :many
 SELECT 
@@ -577,21 +585,25 @@ WHERE status = 'completed';
 
 ### Assunções feitas
 - Personal Record = maior peso para mesmo exercício (desempate: mais reps, depois mais recente)
+- Retornar apenas exercício mais usado por grupo muscular (top 15 PRs)
 - Streak = dias consecutivos (sem permitir folga)
 - Período padrão = últimos 30 dias (se não informar startDate/endDate)
 - Frequency = últimos 365 dias, preencher dias vazios com count=0
-- Progression metric = volume total (peso × reps)
+- Progression metric = volume total (peso × reps) como principal, peso máximo como secundário
+- Limite de período = máximo 2 anos (730 dias)
 
 ### Dependências
-- **Decisão de negócio:**
-  - Definição exata de Personal Record (peso vs volume)
-  - Regra de streak (consecutivo vs permitir folga)
-  - Métrica principal de progressão (volume, peso máximo, reps)
+- **Decisões implementadas:**
+  - Personal Record: maior peso, filtrado por exercício mais usado por grupo muscular
+  - Streak: dias consecutivos
+  - Progression: volume total como métrica principal
+  - Período padrão: 30 dias
+  - Limite máximo: 2 anos
 - **Performance:**
-  - Volumetria esperada (quantas sessions por usuário?)
-  - Necessidade de cache (overview pode ser cacheado?)
+  - Volumetria esperada: ~100 sessions, ~50 set_records por session
+  - Cache não implementado na v1 (adicionar se necessário)
 - **Validações:**
-  - Limite de período máximo (2 anos?)
+  - Período máximo: 2 anos (retornar 400 se maior)
 
 ### Recomendações para Plano de Testes
 
