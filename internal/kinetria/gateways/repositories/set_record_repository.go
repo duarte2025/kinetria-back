@@ -27,14 +27,14 @@ func NewSetRecordRepository(db *sql.DB) *SetRecordRepository {
 // Returns ErrSetAlreadyRecorded if a unique constraint violation occurs (concurrent insert).
 func (r *SetRecordRepository) Create(ctx context.Context, setRecord *entities.SetRecord) error {
 	err := r.q.CreateSetRecord(ctx, queries.CreateSetRecordParams{
-		ID:         setRecord.ID,
-		SessionID:  setRecord.SessionID,
-		ExerciseID: setRecord.ExerciseID,
-		SetNumber:  int32(setRecord.SetNumber),
-		Weight:     int32(setRecord.Weight),
-		Reps:       int32(setRecord.Reps),
-		Status:     setRecord.Status,
-		RecordedAt: setRecord.RecordedAt,
+		ID:                setRecord.ID,
+		SessionID:         setRecord.SessionID,
+		WorkoutExerciseID: uuid.NullUUID{UUID: setRecord.WorkoutExerciseID, Valid: true},
+		SetNumber:         int32(setRecord.SetNumber),
+		Weight:            int32(setRecord.Weight),
+		Reps:              int32(setRecord.Reps),
+		Status:            setRecord.Status,
+		RecordedAt:        setRecord.RecordedAt,
 	})
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -47,24 +47,24 @@ func (r *SetRecordRepository) Create(ctx context.Context, setRecord *entities.Se
 }
 
 // FindBySessionExerciseSet finds a set record by session, exercise and set number.
-func (r *SetRecordRepository) FindBySessionExerciseSet(ctx context.Context, sessionID, exerciseID uuid.UUID, setNumber int) (*entities.SetRecord, error) {
+func (r *SetRecordRepository) FindBySessionExerciseSet(ctx context.Context, sessionID, workoutExerciseID uuid.UUID, setNumber int) (*entities.SetRecord, error) {
 	row, err := r.q.FindSetRecordBySessionExerciseSet(ctx, queries.FindSetRecordBySessionExerciseSetParams{
-		SessionID:  sessionID,
-		ExerciseID: exerciseID,
-		SetNumber:  int32(setNumber),
+		SessionID:         sessionID,
+		WorkoutExerciseID: uuid.NullUUID{UUID: workoutExerciseID, Valid: true},
+		SetNumber:         int32(setNumber),
 	})
 	if err != nil {
 		return nil, err
 	}
 
 	return &entities.SetRecord{
-		ID:         row.ID,
-		SessionID:  row.SessionID,
-		ExerciseID: row.ExerciseID,
-		SetNumber:  int(row.SetNumber),
-		Weight:     int(row.Weight),
-		Reps:       int(row.Reps),
-		Status:     row.Status,
-		RecordedAt: row.RecordedAt,
+		ID:                row.ID,
+		SessionID:         row.SessionID,
+		WorkoutExerciseID: row.WorkoutExerciseID.UUID,
+		SetNumber:         int(row.SetNumber),
+		Weight:            int(row.Weight),
+		Reps:              int(row.Reps),
+		Status:            row.Status,
+		RecordedAt:        row.RecordedAt,
 	}, nil
 }

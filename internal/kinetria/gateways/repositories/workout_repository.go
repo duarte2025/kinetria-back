@@ -129,12 +129,11 @@ func mapSQLCExerciseToEntity(row queries.ListExercisesByWorkoutIDRow) entities.E
 
 	return entities.Exercise{
 		ID:           row.ID,
-		WorkoutID:    row.WorkoutID,
 		Name:         row.Name,
 		ThumbnailURL: row.ThumbnailUrl,
+		Muscles:      muscles,
 		Sets:         int(row.Sets),
 		Reps:         row.Reps,
-		Muscles:      muscles,
 		RestTime:     int(row.RestTime),
 		Weight:       int(row.Weight),
 		OrderIndex:   int(row.OrderIndex),

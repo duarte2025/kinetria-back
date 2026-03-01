@@ -46,8 +46,8 @@ func TestRecordSetUC_Execute(t *testing.T) {
 						Status:    vos.SessionStatusActive,
 					}, nil
 				}
-				er.existsByIDAndWorkoutID = func(ctx context.Context, eid, wid uuid.UUID) (bool, error) {
-					return true, nil
+				er.findWorkoutExerciseID = func(ctx context.Context, eid, wid uuid.UUID) (uuid.UUID, error) {
+					return uuid.New(), nil
 				}
 				srr.findBySessionExerciseSet = func(ctx context.Context, sid, eid uuid.UUID, setNum int) (*entities.SetRecord, error) {
 					return nil, sql.ErrNoRows
@@ -119,8 +119,8 @@ func TestRecordSetUC_Execute(t *testing.T) {
 						Status:    vos.SessionStatusActive,
 					}, nil
 				}
-				er.existsByIDAndWorkoutID = func(ctx context.Context, eid, wid uuid.UUID) (bool, error) {
-					return false, nil
+				er.findWorkoutExerciseID = func(ctx context.Context, eid, wid uuid.UUID) (uuid.UUID, error) {
+					return uuid.Nil, sql.ErrNoRows
 				}
 			},
 			expectedError: domainerrors.ErrExerciseNotFound,
@@ -145,8 +145,8 @@ func TestRecordSetUC_Execute(t *testing.T) {
 						Status:    vos.SessionStatusActive,
 					}, nil
 				}
-				er.existsByIDAndWorkoutID = func(ctx context.Context, eid, wid uuid.UUID) (bool, error) {
-					return true, nil
+				er.findWorkoutExerciseID = func(ctx context.Context, eid, wid uuid.UUID) (uuid.UUID, error) {
+					return uuid.New(), nil
 				}
 				srr.findBySessionExerciseSet = func(ctx context.Context, sid, eid uuid.UUID, setNum int) (*entities.SetRecord, error) {
 					return &entities.SetRecord{ID: uuid.New()}, nil
@@ -233,6 +233,7 @@ func (m *mockSetRecordRepo) FindBySessionExerciseSet(ctx context.Context, sessio
 
 type mockExerciseRepo struct {
 	existsByIDAndWorkoutID func(context.Context, uuid.UUID, uuid.UUID) (bool, error)
+	findWorkoutExerciseID  func(context.Context, uuid.UUID, uuid.UUID) (uuid.UUID, error)
 }
 
 func (m *mockExerciseRepo) ExistsByIDAndWorkoutID(ctx context.Context, exerciseID, workoutID uuid.UUID) (bool, error) {
@@ -240,6 +241,13 @@ func (m *mockExerciseRepo) ExistsByIDAndWorkoutID(ctx context.Context, exerciseI
 		return m.existsByIDAndWorkoutID(ctx, exerciseID, workoutID)
 	}
 	return false, nil
+}
+
+func (m *mockExerciseRepo) FindWorkoutExerciseID(ctx context.Context, exerciseID, workoutID uuid.UUID) (uuid.UUID, error) {
+	if m.findWorkoutExerciseID != nil {
+		return m.findWorkoutExerciseID(ctx, exerciseID, workoutID)
+	}
+	return uuid.New(), nil
 }
 
 type mockAuditRepo struct {

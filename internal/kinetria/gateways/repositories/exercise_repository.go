@@ -22,11 +22,19 @@ func NewExerciseRepository(db *sql.DB) *ExerciseRepository {
 // ExistsByIDAndWorkoutID checks if an exercise exists and belongs to a workout.
 func (r *ExerciseRepository) ExistsByIDAndWorkoutID(ctx context.Context, exerciseID, workoutID uuid.UUID) (bool, error) {
 	result, err := r.q.ExistsExerciseByIDAndWorkoutID(ctx, queries.ExistsExerciseByIDAndWorkoutIDParams{
-		ID:        exerciseID,
-		WorkoutID: workoutID,
+		ExerciseID: exerciseID,
+		WorkoutID:  workoutID,
 	})
 	if err != nil {
 		return false, err
 	}
 	return result, nil
+}
+
+// FindWorkoutExerciseID finds the workout_exercise ID for a given exercise and workout.
+func (r *ExerciseRepository) FindWorkoutExerciseID(ctx context.Context, exerciseID, workoutID uuid.UUID) (uuid.UUID, error) {
+	return r.q.FindWorkoutExerciseID(ctx, queries.FindWorkoutExerciseIDParams{
+		ExerciseID: exerciseID,
+		WorkoutID:  workoutID,
+	})
 }
