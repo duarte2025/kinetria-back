@@ -183,7 +183,7 @@ func (h *SessionsHandler) RecordSet(w http.ResponseWriter, r *http.Request) {
 	writeSuccess(w, http.StatusCreated, map[string]interface{}{
 		"id":         output.SetRecord.ID.String(),
 		"sessionId":  output.SetRecord.SessionID.String(),
-		"exerciseId": output.SetRecord.ExerciseID.String(),
+		"exerciseId": output.SetRecord.WorkoutExerciseID.String(),
 		"setNumber":  output.SetRecord.SetNumber,
 		"weight":     output.SetRecord.Weight,
 		"reps":       output.SetRecord.Reps,

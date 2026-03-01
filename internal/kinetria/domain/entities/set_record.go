@@ -7,14 +7,15 @@ import (
 )
 
 type SetRecordID = uuid.UUID
+type WorkoutExerciseID = uuid.UUID
 
 type SetRecord struct {
-	ID         SetRecordID
-	SessionID  SessionID
-	ExerciseID ExerciseID
-	SetNumber  int
-	Weight     int
-	Reps       int
-	Status     string
-	RecordedAt time.Time
+	ID                SetRecordID
+	SessionID         SessionID
+	WorkoutExerciseID WorkoutExerciseID
+	SetNumber         int
+	Weight            int
+	Reps              int
+	Status            string
+	RecordedAt        time.Time
 }

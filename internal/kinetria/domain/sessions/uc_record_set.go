@@ -84,17 +84,17 @@ func (uc *RecordSetUseCase) Execute(ctx context.Context, input RecordSetInput) (
 		return RecordSetOutput{}, errors.ErrSessionNotActive
 	}
 
-	// Validate exercise belongs to workout
-	exists, err := uc.exerciseRepo.ExistsByIDAndWorkoutID(ctx, input.ExerciseID, session.WorkoutID)
+	// Validate exercise belongs to workout and get workout_exercise_id
+	workoutExerciseID, err := uc.exerciseRepo.FindWorkoutExerciseID(ctx, input.ExerciseID, session.WorkoutID)
 	if err != nil {
-		return RecordSetOutput{}, fmt.Errorf("failed to check exercise: %w", err)
-	}
-	if !exists {
-		return RecordSetOutput{}, errors.ErrExerciseNotFound
+		if stdErrors.Is(err, sql.ErrNoRows) {
+			return RecordSetOutput{}, errors.ErrExerciseNotFound
+		}
+		return RecordSetOutput{}, fmt.Errorf("failed to find workout exercise: %w", err)
 	}
 
 	// Check for duplicate
-	existing, err := uc.setRecordRepo.FindBySessionExerciseSet(ctx, input.SessionID, input.ExerciseID, input.SetNumber)
+	existing, err := uc.setRecordRepo.FindBySessionExerciseSet(ctx, input.SessionID, workoutExerciseID, input.SetNumber)
 	if err != nil && err != sql.ErrNoRows {
 		return RecordSetOutput{}, fmt.Errorf("failed to check duplicate: %w", err)
 	}
@@ -105,14 +105,14 @@ func (uc *RecordSetUseCase) Execute(ctx context.Context, input RecordSetInput) (
 	// Create SetRecord
 	now := time.Now()
 	setRecord := entities.SetRecord{
-		ID:         uuid.New(),
-		SessionID:  input.SessionID,
-		ExerciseID: input.ExerciseID,
-		SetNumber:  input.SetNumber,
-		Weight:     input.Weight,
-		Reps:       input.Reps,
-		Status:     input.Status.String(),
-		RecordedAt: now,
+		ID:                uuid.New(),
+		SessionID:         input.SessionID,
+		WorkoutExerciseID: workoutExerciseID,
+		SetNumber:         input.SetNumber,
+		Weight:            input.Weight,
+		Reps:              input.Reps,
+		Status:            input.Status.String(),
+		RecordedAt:        now,
 	}
 
 	// Persist

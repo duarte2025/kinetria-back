@@ -44,12 +44,13 @@ type SessionRepository interface {
 // SetRecordRepository defines persistence operations for set records.
 type SetRecordRepository interface {
 	Create(ctx context.Context, setRecord *entities.SetRecord) error
-	FindBySessionExerciseSet(ctx context.Context, sessionID, exerciseID uuid.UUID, setNumber int) (*entities.SetRecord, error)
+	FindBySessionExerciseSet(ctx context.Context, sessionID, workoutExerciseID uuid.UUID, setNumber int) (*entities.SetRecord, error)
 }
 
 // ExerciseRepository defines persistence operations for exercises.
 type ExerciseRepository interface {
 	ExistsByIDAndWorkoutID(ctx context.Context, exerciseID, workoutID uuid.UUID) (bool, error)
+	FindWorkoutExerciseID(ctx context.Context, exerciseID, workoutID uuid.UUID) (uuid.UUID, error)
 }
 
 // AuditLogRepository defines persistence for audit log entries (append-only).
