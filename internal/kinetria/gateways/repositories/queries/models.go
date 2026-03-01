@@ -31,6 +31,11 @@ type Exercise struct {
 	Description  string          `json:"description"`
 	ThumbnailUrl string          `json:"thumbnail_url"`
 	Muscles      json.RawMessage `json:"muscles"`
+	Instructions sql.NullString  `json:"instructions"`
+	Tips         sql.NullString  `json:"tips"`
+	Difficulty   sql.NullString  `json:"difficulty"`
+	Equipment    sql.NullString  `json:"equipment"`
+	VideoUrl     sql.NullString  `json:"video_url"`
 	CreatedAt    time.Time       `json:"created_at"`
 	UpdatedAt    time.Time       `json:"updated_at"`
 }

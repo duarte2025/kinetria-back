@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/entities"
 	domainerrors "github.com/kinetria/kinetria-back/internal/kinetria/domain/errors"
+	"github.com/kinetria/kinetria-back/internal/kinetria/domain/ports"
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/sessions"
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/vos"
 )
@@ -248,6 +249,22 @@ func (m *mockExerciseRepo) FindWorkoutExerciseID(ctx context.Context, exerciseID
 		return m.findWorkoutExerciseID(ctx, exerciseID, workoutID)
 	}
 	return uuid.New(), nil
+}
+
+func (m *mockExerciseRepo) List(_ context.Context, _ ports.ExerciseFilters, _, _ int) ([]*entities.Exercise, int, error) {
+	return nil, 0, nil
+}
+
+func (m *mockExerciseRepo) GetByID(_ context.Context, _ uuid.UUID) (*entities.Exercise, error) {
+	return nil, nil
+}
+
+func (m *mockExerciseRepo) GetUserStats(_ context.Context, _, _ uuid.UUID) (*ports.ExerciseUserStats, error) {
+	return nil, nil
+}
+
+func (m *mockExerciseRepo) GetHistory(_ context.Context, _, _ uuid.UUID, _, _ int) ([]*ports.ExerciseHistoryEntry, int, error) {
+	return nil, 0, nil
 }
 
 type mockAuditRepo struct {

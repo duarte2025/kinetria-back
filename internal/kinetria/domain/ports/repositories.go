@@ -48,10 +48,56 @@ type SetRecordRepository interface {
 	FindBySessionExerciseSet(ctx context.Context, sessionID, workoutExerciseID uuid.UUID, setNumber int) (*entities.SetRecord, error)
 }
 
+// ExerciseFilters holds optional filter parameters for querying the exercise library.
+type ExerciseFilters struct {
+	MuscleGroup *string
+	Equipment   *string
+	Difficulty  *string
+	Search      *string
+}
+
+// ExerciseUserStats holds performance statistics for a user on a specific exercise.
+type ExerciseUserStats struct {
+	LastPerformed  *time.Time
+	BestWeight     *int
+	TimesPerformed int
+	AverageWeight  *float64
+}
+
+// SetDetail represents a single recorded set within an exercise history entry.
+type SetDetail struct {
+	SetNumber int
+	Reps      int
+	Weight    *int
+	Status    string
+}
+
+// ExerciseHistoryEntry represents one session in which the user performed an exercise,
+// including all recorded sets for that session.
+type ExerciseHistoryEntry struct {
+	SessionID   uuid.UUID
+	WorkoutName string
+	PerformedAt time.Time
+	Sets        []SetDetail
+}
+
 // ExerciseRepository defines persistence operations for exercises.
 type ExerciseRepository interface {
 	ExistsByIDAndWorkoutID(ctx context.Context, exerciseID, workoutID uuid.UUID) (bool, error)
 	FindWorkoutExerciseID(ctx context.Context, exerciseID, workoutID uuid.UUID) (uuid.UUID, error)
+
+	// List returns a paginated list of exercises from the library, optionally filtered.
+	List(ctx context.Context, filters ExerciseFilters, page, pageSize int) ([]*entities.Exercise, int, error)
+
+	// GetByID returns a single exercise by its ID, or nil if not found.
+	GetByID(ctx context.Context, exerciseID uuid.UUID) (*entities.Exercise, error)
+
+	// GetUserStats returns performance statistics for a specific user and exercise.
+	// Returns stats with TimesPerformed=0 and nil pointers if the user has never done the exercise.
+	GetUserStats(ctx context.Context, userID, exerciseID uuid.UUID) (*ExerciseUserStats, error)
+
+	// GetHistory returns a paginated list of sessions in which the user performed the exercise.
+	GetHistory(ctx context.Context, userID, exerciseID uuid.UUID, page, pageSize int) ([]*ExerciseHistoryEntry, int, error)
 }
 
 // AuditLogRepository defines persistence for audit log entries (append-only).

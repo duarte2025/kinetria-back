@@ -13,6 +13,7 @@ type ServiceRouter struct {
 	workoutsHandler  *WorkoutsHandler
 	dashboardHandler *DashboardHandler
 	profileHandler   *ProfileHandler
+	exercisesHandler *ExercisesHandler
 	jwtManager       *gatewayauth.JWTManager
 }
 
@@ -23,6 +24,7 @@ func NewServiceRouter(
 	workoutsHandler *WorkoutsHandler,
 	dashboardHandler *DashboardHandler,
 	profileHandler *ProfileHandler,
+	exercisesHandler *ExercisesHandler,
 	jwtManager *gatewayauth.JWTManager,
 ) ServiceRouter {
 	return ServiceRouter{
@@ -31,6 +33,7 @@ func NewServiceRouter(
 		workoutsHandler:  workoutsHandler,
 		dashboardHandler: dashboardHandler,
 		profileHandler:   profileHandler,
+		exercisesHandler: exercisesHandler,
 		jwtManager:       jwtManager,
 	}
 }
@@ -68,4 +71,9 @@ func (s ServiceRouter) Router(router chi.Router) {
 	// Profile (authenticated)
 	router.With(AuthMiddleware(s.jwtManager)).Get("/profile", s.profileHandler.HandleGetProfile)
 	router.With(AuthMiddleware(s.jwtManager)).Patch("/profile", s.profileHandler.HandleUpdateProfile)
+
+	// Exercise library (public with optional auth, except /history which requires auth)
+	router.Get("/exercises", s.exercisesHandler.HandleListExercises)
+	router.Get("/exercises/{id}", s.exercisesHandler.HandleGetExercise)
+	router.With(AuthMiddleware(s.jwtManager)).Get("/exercises/{id}/history", s.exercisesHandler.HandleGetExerciseHistory)
 }

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/google/uuid"
 	gatewayauth "github.com/kinetria/kinetria-back/internal/kinetria/gateways/auth"
 )
 
@@ -32,4 +33,20 @@ func AuthMiddleware(jwtManager *gatewayauth.JWTManager) func(next http.Handler) 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
+}
+
+// tryExtractUserIDFromJWT attempts to extract the userID from the JWT Bearer token
+// in the Authorization header. Returns nil if the token is absent or invalid — no error is returned.
+// This is used for endpoints with optional authentication.
+func tryExtractUserIDFromJWT(r *http.Request, jwtManager *gatewayauth.JWTManager) *uuid.UUID {
+	authHeader := r.Header.Get("Authorization")
+	if !strings.HasPrefix(authHeader, "Bearer ") {
+		return nil
+	}
+	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+	userID, err := jwtManager.ParseToken(tokenString)
+	if err != nil {
+		return nil
+	}
+	return &userID
 }
