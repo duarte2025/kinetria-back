@@ -8,13 +8,14 @@ import (
 
 // ServiceRouter mounts all API routes for the kinetria service.
 type ServiceRouter struct {
-	authHandler      *AuthHandler
-	sessionsHandler  *SessionsHandler
-	workoutsHandler  *WorkoutsHandler
-	dashboardHandler *DashboardHandler
-	profileHandler   *ProfileHandler
-	exercisesHandler *ExercisesHandler
-	jwtManager       *gatewayauth.JWTManager
+	authHandler        *AuthHandler
+	sessionsHandler    *SessionsHandler
+	workoutsHandler    *WorkoutsHandler
+	dashboardHandler   *DashboardHandler
+	profileHandler     *ProfileHandler
+	exercisesHandler   *ExercisesHandler
+	statisticsHandler  *StatisticsHandler
+	jwtManager         *gatewayauth.JWTManager
 }
 
 // NewServiceRouter creates a new ServiceRouter with the provided handlers.
@@ -25,16 +26,18 @@ func NewServiceRouter(
 	dashboardHandler *DashboardHandler,
 	profileHandler *ProfileHandler,
 	exercisesHandler *ExercisesHandler,
+	statisticsHandler *StatisticsHandler,
 	jwtManager *gatewayauth.JWTManager,
 ) ServiceRouter {
 	return ServiceRouter{
-		authHandler:      authHandler,
-		sessionsHandler:  sessionsHandler,
-		workoutsHandler:  workoutsHandler,
-		dashboardHandler: dashboardHandler,
-		profileHandler:   profileHandler,
-		exercisesHandler: exercisesHandler,
-		jwtManager:       jwtManager,
+		authHandler:       authHandler,
+		sessionsHandler:   sessionsHandler,
+		workoutsHandler:   workoutsHandler,
+		dashboardHandler:  dashboardHandler,
+		profileHandler:    profileHandler,
+		exercisesHandler:  exercisesHandler,
+		statisticsHandler: statisticsHandler,
+		jwtManager:        jwtManager,
 	}
 }
 
@@ -79,4 +82,10 @@ func (s ServiceRouter) Router(router chi.Router) {
 	router.Get("/exercises", s.exercisesHandler.HandleListExercises)
 	router.Get("/exercises/{id}", s.exercisesHandler.HandleGetExercise)
 	router.With(AuthMiddleware(s.jwtManager)).Get("/exercises/{id}/history", s.exercisesHandler.HandleGetExerciseHistory)
+
+	// Statistics (authenticated)
+	router.With(AuthMiddleware(s.jwtManager)).Get("/stats/overview", s.statisticsHandler.HandleGetOverview)
+	router.With(AuthMiddleware(s.jwtManager)).Get("/stats/progression", s.statisticsHandler.HandleGetProgression)
+	router.With(AuthMiddleware(s.jwtManager)).Get("/stats/personal-records", s.statisticsHandler.HandleGetPersonalRecords)
+	router.With(AuthMiddleware(s.jwtManager)).Get("/stats/frequency", s.statisticsHandler.HandleGetFrequency)
 }

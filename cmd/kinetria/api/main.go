@@ -14,6 +14,7 @@ import (
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/ports"
 	domainprofile "github.com/kinetria/kinetria-back/internal/kinetria/domain/profile"
 	domainsessions "github.com/kinetria/kinetria-back/internal/kinetria/domain/sessions"
+	domainstatistics "github.com/kinetria/kinetria-back/internal/kinetria/domain/statistics"
 	domainworkouts "github.com/kinetria/kinetria-back/internal/kinetria/domain/workouts"
 	gatewayauth "github.com/kinetria/kinetria-back/internal/kinetria/gateways/auth"
 	"github.com/kinetria/kinetria-back/internal/kinetria/gateways/config"
@@ -138,6 +139,12 @@ func main() {
 			domainexercises.NewGetExerciseUC,
 			domainexercises.NewGetExerciseHistoryUC,
 
+			// Statistics use cases
+			domainstatistics.NewGetOverviewUC,
+			domainstatistics.NewGetProgressionUC,
+			domainstatistics.NewGetPersonalRecordsUC,
+			domainstatistics.NewGetFrequencyUC,
+
 			// Validator and HTTP
 			validator.New,
 			healthhandler.NewHealthHandler,
@@ -147,6 +154,7 @@ func main() {
 			httpgateway.NewDashboardHandler,
 			httpgateway.NewProfileHandler,
 			httpgateway.NewExercisesHandler,
+			httpgateway.NewStatisticsHandler,
 			httpgateway.NewServiceRouter,
 			chi.NewRouter,
 		),
