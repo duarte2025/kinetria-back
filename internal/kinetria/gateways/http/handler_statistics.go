@@ -1,11 +1,12 @@
 package service
 
 import (
+	"errors"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	domainerrors "github.com/kinetria/kinetria-back/internal/kinetria/domain/errors"
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/statistics"
 )
 
@@ -239,19 +240,17 @@ func parseDate(s string) (time.Time, error) {
 	if t, err := time.Parse("2006-01-02", s); err == nil {
 		return t.UTC(), nil
 	}
-	return time.Parse(time.RFC3339, s)
+	if t, err := time.Parse(time.RFC3339, s); err == nil {
+		return t.UTC(), nil
+	}
+	return time.Time{}, domainerrors.ErrInvalidPeriod
 }
 
-// isStatValidationError reports whether the error is a validation/business error.
+// isStatValidationError reports whether the error is a period/input validation error.
 func isStatValidationError(err error) bool {
-	if err == nil {
-		return false
-	}
-	msg := err.Error()
-	return strings.Contains(msg, "must be") ||
-		strings.Contains(msg, "must not") ||
-		strings.Contains(msg, "invalid") ||
-		strings.Contains(msg, "exceed")
+	return errors.Is(err, domainerrors.ErrInvalidPeriod) ||
+		errors.Is(err, domainerrors.ErrPeriodTooLong) ||
+		errors.Is(err, domainerrors.ErrInvalidUUID)
 }
 
 // --- Response mappers ---

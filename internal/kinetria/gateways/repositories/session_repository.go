@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -191,17 +190,5 @@ func (r *SessionRepository) GetFrequencyByUserAndPeriod(ctx context.Context, use
 
 // GetSessionsForStreak retorna datas únicas de sessões completadas nos últimos 365 dias.
 func (r *SessionRepository) GetSessionsForStreak(ctx context.Context, userID uuid.UUID) ([]time.Time, error) {
-	dateStrings, err := r.q.GetSessionsForStreak(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-	result := make([]time.Time, 0, len(dateStrings))
-	for _, ds := range dateStrings {
-		t, err := time.Parse("2006-01-02", ds)
-		if err != nil {
-			return nil, fmt.Errorf("invalid date from DB: %w", err)
-		}
-		result = append(result, t)
-	}
-	return result, nil
+	return r.q.GetSessionsForStreak(ctx, userID)
 }

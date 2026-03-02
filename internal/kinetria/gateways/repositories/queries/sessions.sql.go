@@ -280,7 +280,7 @@ return items, nil
 // GetSessionsForStreak
 const getSessionsForStreak = `-- name: GetSessionsForStreak :many
 SELECT
-    DATE(started_at)::text AS date
+    DATE(started_at) AS date
 FROM sessions
 WHERE user_id = $1
   AND status = 'completed'
@@ -289,15 +289,15 @@ GROUP BY DATE(started_at)
 ORDER BY date DESC
 `
 
-func (q *Queries) GetSessionsForStreak(ctx context.Context, userID uuid.UUID) ([]string, error) {
+func (q *Queries) GetSessionsForStreak(ctx context.Context, userID uuid.UUID) ([]time.Time, error) {
 rows, err := q.db.QueryContext(ctx, getSessionsForStreak, userID)
 if err != nil {
 return nil, err
 }
 defer rows.Close()
-var items []string
+var items []time.Time
 for rows.Next() {
-var date string
+var date time.Time
 if err := rows.Scan(&date); err != nil {
 return nil, err
 }

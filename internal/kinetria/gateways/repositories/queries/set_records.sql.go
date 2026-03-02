@@ -194,7 +194,7 @@ AchievedAt   time.Time `json:"achieved_at"`
 }
 
 func (q *Queries) GetPersonalRecordsByUser(ctx context.Context, userID uuid.UUID) ([]GetPersonalRecordsByUserRow, error) {
-rows, err := q.db.QueryContext(ctx, getPersonalRecordsByUser, userID, userID)
+rows, err := q.db.QueryContext(ctx, getPersonalRecordsByUser, userID)
 if err != nil {
 return nil, err
 }

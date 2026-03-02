@@ -60,7 +60,7 @@ ORDER BY date;
 
 -- name: GetSessionsForStreak :many
 SELECT
-    DATE(started_at)::text AS date
+    DATE(started_at) AS date
 FROM sessions
 WHERE user_id = $1
   AND status = 'completed'

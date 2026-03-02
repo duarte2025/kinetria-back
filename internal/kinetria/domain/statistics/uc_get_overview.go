@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	domainerrors "github.com/kinetria/kinetria-back/internal/kinetria/domain/errors"
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/ports"
 )
 
@@ -48,10 +49,10 @@ func (uc *GetOverviewUC) Execute(ctx context.Context, input GetOverviewInput) (*
 
 	// Validate period
 	if start.After(end) {
-		return nil, fmt.Errorf("startDate must be before or equal to endDate")
+		return nil, domainerrors.ErrInvalidPeriod
 	}
 	if end.Sub(start).Hours()/24 > maxPeriodDays {
-		return nil, fmt.Errorf("period must not exceed %d days", maxPeriodDays)
+		return nil, domainerrors.ErrPeriodTooLong
 	}
 
 	// Fetch session stats

@@ -2,10 +2,10 @@ package statistics
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+	domainerrors "github.com/kinetria/kinetria-back/internal/kinetria/domain/errors"
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/ports"
 )
 
@@ -46,16 +46,16 @@ func (uc *GetFrequencyUC) Execute(ctx context.Context, input GetFrequencyInput) 
 
 	// Validate period
 	if start.After(end) {
-		return nil, fmt.Errorf("startDate must be before or equal to endDate")
+		return nil, domainerrors.ErrInvalidPeriod
 	}
 	if end.Sub(start).Hours()/24 > maxPeriodDays {
-		return nil, fmt.Errorf("period must not exceed %d days", maxPeriodDays)
+		return nil, domainerrors.ErrPeriodTooLong
 	}
 
 	// Fetch data from DB (only days with workouts)
 	dbRows, err := uc.sessionRepo.GetFrequencyByUserAndPeriod(ctx, input.UserID, start, end.Add(24*time.Hour-time.Second))
 	if err != nil {
-		return nil, fmt.Errorf("get frequency: %w", err)
+		return nil, err
 	}
 
 	// Build a map for quick lookup
