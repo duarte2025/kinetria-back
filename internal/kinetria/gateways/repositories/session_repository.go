@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/entities"
+	"github.com/kinetria/kinetria-back/internal/kinetria/domain/ports"
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/vos"
 	"github.com/kinetria/kinetria-back/internal/kinetria/gateways/repositories/queries"
 )
@@ -149,4 +150,45 @@ func (r *SessionRepository) GetCompletedSessionsByUserAndDateRange(
 	}
 
 	return sessions, nil
+}
+
+// GetStatsByUserAndPeriod retorna estatísticas agregadas de sessões do usuário no período.
+func (r *SessionRepository) GetStatsByUserAndPeriod(ctx context.Context, userID uuid.UUID, start, end time.Time) (*ports.SessionStats, error) {
+	row, err := r.q.GetStatsByUserAndPeriod(ctx, queries.GetStatsByUserAndPeriodParams{
+		UserID:      userID,
+		StartedAt:   start,
+		StartedAt_2: end,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &ports.SessionStats{
+		TotalWorkouts: int(row.TotalWorkouts),
+		TotalTime:     int(row.TotalTimeMinutes),
+	}, nil
+}
+
+// GetFrequencyByUserAndPeriod retorna a frequência de treinos por dia no período.
+func (r *SessionRepository) GetFrequencyByUserAndPeriod(ctx context.Context, userID uuid.UUID, start, end time.Time) ([]ports.FrequencyData, error) {
+	rows, err := r.q.GetFrequencyByUserAndPeriod(ctx, queries.GetFrequencyByUserAndPeriodParams{
+		UserID:      userID,
+		StartedAt:   start,
+		StartedAt_2: end,
+	})
+	if err != nil {
+		return nil, err
+	}
+	result := make([]ports.FrequencyData, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, ports.FrequencyData{
+			Date:  row.Date,
+			Count: int(row.Count),
+		})
+	}
+	return result, nil
+}
+
+// GetSessionsForStreak retorna datas únicas de sessões completadas nos últimos 365 dias.
+func (r *SessionRepository) GetSessionsForStreak(ctx context.Context, userID uuid.UUID) ([]time.Time, error) {
+	return r.q.GetSessionsForStreak(ctx, userID)
 }

@@ -27,4 +27,9 @@ var (
 	ErrForbidden                = errors.New("forbidden")
 	ErrWorkoutHasActiveSessions = errors.New("workout has active sessions")
 	ErrCannotModifyTemplate     = errors.New("cannot modify template workouts")
+
+	// Statistics errors
+	ErrInvalidPeriod = errors.New("startDate must be before or equal to endDate")
+	ErrPeriodTooLong = errors.New("period must not exceed 730 days")
+	ErrInvalidUUID   = errors.New("invalid UUID format")
 )

@@ -213,6 +213,18 @@ func (m *mockSessionRepo) GetCompletedSessionsByUserAndDateRange(_ context.Conte
 	return nil, nil
 }
 
+func (m *mockSessionRepo) GetStatsByUserAndPeriod(_ context.Context, _ uuid.UUID, _, _ time.Time) (*ports.SessionStats, error) {
+	return &ports.SessionStats{}, nil
+}
+
+func (m *mockSessionRepo) GetFrequencyByUserAndPeriod(_ context.Context, _ uuid.UUID, _, _ time.Time) ([]ports.FrequencyData, error) {
+	return nil, nil
+}
+
+func (m *mockSessionRepo) GetSessionsForStreak(_ context.Context, _ uuid.UUID) ([]time.Time, error) {
+	return nil, nil
+}
+
 type mockSetRecordRepo struct {
 	create                   func(context.Context, *entities.SetRecord) error
 	findBySessionExerciseSet func(context.Context, uuid.UUID, uuid.UUID, int) (*entities.SetRecord, error)
@@ -229,6 +241,18 @@ func (m *mockSetRecordRepo) FindBySessionExerciseSet(ctx context.Context, sessio
 	if m.findBySessionExerciseSet != nil {
 		return m.findBySessionExerciseSet(ctx, sessionID, exerciseID, setNumber)
 	}
+	return nil, nil
+}
+
+func (m *mockSetRecordRepo) GetTotalSetsRepsVolume(_ context.Context, _ uuid.UUID, _, _ time.Time) (*ports.SetRecordStats, error) {
+	return &ports.SetRecordStats{}, nil
+}
+
+func (m *mockSetRecordRepo) GetPersonalRecordsByUser(_ context.Context, _ uuid.UUID) ([]ports.PersonalRecord, error) {
+	return nil, nil
+}
+
+func (m *mockSetRecordRepo) GetProgressionByUserAndExercise(_ context.Context, _ uuid.UUID, _ *uuid.UUID, _, _ time.Time) ([]ports.ProgressionPoint, error) {
 	return nil, nil
 }
 

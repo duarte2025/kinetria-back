@@ -17,6 +17,7 @@ import (
 	domainexercises "github.com/kinetria/kinetria-back/internal/kinetria/domain/exercises"
 	domainprofile "github.com/kinetria/kinetria-back/internal/kinetria/domain/profile"
 	domainsessions "github.com/kinetria/kinetria-back/internal/kinetria/domain/sessions"
+	domainstatistics "github.com/kinetria/kinetria-back/internal/kinetria/domain/statistics"
 	domainworkouts "github.com/kinetria/kinetria-back/internal/kinetria/domain/workouts"
 	gatewayauth "github.com/kinetria/kinetria-back/internal/kinetria/gateways/auth"
 	"github.com/kinetria/kinetria-back/internal/kinetria/gateways/config"
@@ -111,15 +112,21 @@ func SetupTestServer(t *testing.T) *TestServer {
 	getExerciseUC := domainexercises.NewGetExerciseUC(exerciseRepo)
 	getExerciseHistoryUC := domainexercises.NewGetExerciseHistoryUC(exerciseRepo)
 
+	getOverviewUC := domainstatistics.NewGetOverviewUC(sessionRepo, setRecordRepo)
+	getProgressionUC := domainstatistics.NewGetProgressionUC(setRecordRepo)
+	getPersonalRecordsUC := domainstatistics.NewGetPersonalRecordsUC(setRecordRepo)
+	getFrequencyUC := domainstatistics.NewGetFrequencyUC(sessionRepo)
+
 	authHandler := service.NewAuthHandler(registerUC, loginUC, refreshTokenUC, logoutUC, jwtManager, validate)
 	sessionsHandler := service.NewSessionsHandler(startSessionUC, recordSetUC, finishSessionUC, abandonSessionUC)
 	workoutsHandler := service.NewWorkoutsHandler(listWorkoutsUC, getWorkoutUC, createWorkoutUC, updateWorkoutUC, deleteWorkoutUC, jwtManager)
 	dashboardHandler := service.NewDashboardHandler(getUserProfileUC, getTodayWorkoutUC, getWeekProgressUC, getWeekStatsUC)
 	profileHandler := service.NewProfileHandler(getProfileUC, updateProfileUC)
 	exercisesHandler := service.NewExercisesHandler(listExercisesUC, getExerciseUC, getExerciseHistoryUC, jwtManager)
+	statisticsHandler := service.NewStatisticsHandler(getOverviewUC, getProgressionUC, getPersonalRecordsUC, getFrequencyUC)
 
 	router := chi.NewRouter()
-	serviceRouter := service.NewServiceRouter(authHandler, sessionsHandler, workoutsHandler, dashboardHandler, profileHandler, exercisesHandler, jwtManager)
+	serviceRouter := service.NewServiceRouter(authHandler, sessionsHandler, workoutsHandler, dashboardHandler, profileHandler, exercisesHandler, statisticsHandler, jwtManager)
 	router.Route(serviceRouter.Pattern(), serviceRouter.Router)
 
 	httpServer := httptest.NewServer(router)

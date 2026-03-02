@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/entities"
 	domainerrors "github.com/kinetria/kinetria-back/internal/kinetria/domain/errors"
+	"github.com/kinetria/kinetria-back/internal/kinetria/domain/ports"
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/sessions"
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/vos"
 )
@@ -43,6 +44,18 @@ func (m *mockSessionRepository) UpdateStatus(ctx context.Context, sessionID uuid
 }
 
 func (m *mockSessionRepository) GetCompletedSessionsByUserAndDateRange(_ context.Context, _ uuid.UUID, _, _ time.Time) ([]entities.Session, error) {
+	return nil, nil
+}
+
+func (m *mockSessionRepository) GetStatsByUserAndPeriod(_ context.Context, _ uuid.UUID, _, _ time.Time) (*ports.SessionStats, error) {
+	return &ports.SessionStats{}, nil
+}
+
+func (m *mockSessionRepository) GetFrequencyByUserAndPeriod(_ context.Context, _ uuid.UUID, _, _ time.Time) ([]ports.FrequencyData, error) {
+	return nil, nil
+}
+
+func (m *mockSessionRepository) GetSessionsForStreak(_ context.Context, _ uuid.UUID) ([]time.Time, error) {
 	return nil, nil
 }
 

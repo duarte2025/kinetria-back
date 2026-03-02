@@ -25,6 +25,42 @@ type RefreshTokenRepository interface {
 	RevokeAllByUserID(ctx context.Context, userID uuid.UUID) error
 }
 
+// SessionStats holds aggregated statistics for a user's sessions.
+type SessionStats struct {
+	TotalWorkouts int
+	TotalTime     int // minutos
+}
+
+// FrequencyData holds the workout count for a specific date.
+type FrequencyData struct {
+	Date  time.Time
+	Count int
+}
+
+// SetRecordStats holds aggregated set statistics.
+type SetRecordStats struct {
+	TotalSets   int
+	TotalReps   int
+	TotalVolume int64
+}
+
+// PersonalRecord holds the best performance for an exercise.
+type PersonalRecord struct {
+	ExerciseID   uuid.UUID
+	ExerciseName string
+	Weight       int
+	Reps         int
+	Volume       int64
+	AchievedAt   time.Time
+}
+
+// ProgressionPoint holds aggregated data for a single day.
+type ProgressionPoint struct {
+	Date        time.Time
+	MaxWeight   int64
+	TotalVolume int64
+}
+
 // SessionRepository defines persistence operations for workout sessions.
 type SessionRepository interface {
 	Create(ctx context.Context, session *entities.Session) error
@@ -40,12 +76,18 @@ type SessionRepository interface {
 		startDate time.Time,
 		endDate time.Time,
 	) ([]entities.Session, error)
+	GetStatsByUserAndPeriod(ctx context.Context, userID uuid.UUID, start, end time.Time) (*SessionStats, error)
+	GetFrequencyByUserAndPeriod(ctx context.Context, userID uuid.UUID, start, end time.Time) ([]FrequencyData, error)
+	GetSessionsForStreak(ctx context.Context, userID uuid.UUID) ([]time.Time, error)
 }
 
 // SetRecordRepository defines persistence operations for set records.
 type SetRecordRepository interface {
 	Create(ctx context.Context, setRecord *entities.SetRecord) error
 	FindBySessionExerciseSet(ctx context.Context, sessionID, workoutExerciseID uuid.UUID, setNumber int) (*entities.SetRecord, error)
+	GetTotalSetsRepsVolume(ctx context.Context, userID uuid.UUID, start, end time.Time) (*SetRecordStats, error)
+	GetPersonalRecordsByUser(ctx context.Context, userID uuid.UUID) ([]PersonalRecord, error)
+	GetProgressionByUserAndExercise(ctx context.Context, userID uuid.UUID, exerciseID *uuid.UUID, start, end time.Time) ([]ProgressionPoint, error)
 }
 
 // ExerciseFilters holds optional filter parameters for querying the exercise library.

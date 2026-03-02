@@ -80,3 +80,206 @@ func (q *Queries) FindSetRecordBySessionExerciseSet(ctx context.Context, arg Fin
 	)
 	return i, err
 }
+
+// GetTotalSetsRepsVolume
+const getTotalSetsRepsVolume = `-- name: GetTotalSetsRepsVolume :one
+SELECT
+    COUNT(sr.id)::bigint AS total_sets,
+    COALESCE(SUM(sr.reps), 0)::bigint AS total_reps,
+    COALESCE(SUM(sr.weight::bigint * sr.reps), 0)::bigint AS total_volume
+FROM set_records sr
+JOIN sessions s ON sr.session_id = s.id
+WHERE s.user_id = $1
+  AND s.status = 'completed'
+  AND sr.status = 'completed'
+  AND s.started_at >= $2
+  AND s.started_at <= $3
+`
+
+type GetTotalSetsRepsVolumeParams struct {
+UserID      uuid.UUID `json:"user_id"`
+StartedAt   time.Time `json:"started_at"`
+StartedAt_2 time.Time `json:"started_at_2"`
+}
+
+type GetTotalSetsRepsVolumeRow struct {
+TotalSets   int64 `json:"total_sets"`
+TotalReps   int64 `json:"total_reps"`
+TotalVolume int64 `json:"total_volume"`
+}
+
+func (q *Queries) GetTotalSetsRepsVolume(ctx context.Context, arg GetTotalSetsRepsVolumeParams) (GetTotalSetsRepsVolumeRow, error) {
+row := q.db.QueryRowContext(ctx, getTotalSetsRepsVolume, arg.UserID, arg.StartedAt, arg.StartedAt_2)
+var i GetTotalSetsRepsVolumeRow
+err := row.Scan(&i.TotalSets, &i.TotalReps, &i.TotalVolume)
+return i, err
+}
+
+// GetPersonalRecordsByUser
+const getPersonalRecordsByUser = `-- name: GetPersonalRecordsByUser :many
+WITH best_sets AS (
+    SELECT
+        we.exercise_id,
+        e.name                                                                          AS exercise_name,
+        e.muscles ->> 0                                                                 AS primary_muscle,
+        sr.weight,
+        sr.reps,
+        s.started_at,
+        ROW_NUMBER() OVER (PARTITION BY we.exercise_id ORDER BY sr.weight DESC, sr.reps DESC, s.started_at DESC) AS rn_exercise
+    FROM set_records sr
+    JOIN sessions s ON sr.session_id = s.id
+    JOIN workout_exercises we ON sr.workout_exercise_id = we.id
+    JOIN exercises e ON we.exercise_id = e.id
+    WHERE s.user_id = $1
+      AND s.status = 'completed'
+      AND sr.status = 'completed'
+      AND sr.weight > 0
+),
+best_per_exercise AS (
+    SELECT exercise_id, exercise_name, primary_muscle, weight, reps, started_at
+    FROM best_sets
+    WHERE rn_exercise = 1
+),
+exercise_frequency AS (
+    SELECT
+        we.exercise_id,
+        COUNT(DISTINCT s.id) AS times_used
+    FROM set_records sr
+    JOIN sessions s ON sr.session_id = s.id
+    JOIN workout_exercises we ON sr.workout_exercise_id = we.id
+    WHERE s.user_id = $1
+      AND s.status = 'completed'
+    GROUP BY we.exercise_id
+),
+exercise_data AS (
+    SELECT
+        bpe.exercise_id,
+        bpe.exercise_name,
+        bpe.primary_muscle,
+        bpe.weight,
+        bpe.reps,
+        bpe.started_at,
+        COALESCE(ef.times_used, 0) AS times_used
+    FROM best_per_exercise bpe
+    LEFT JOIN exercise_frequency ef ON bpe.exercise_id = ef.exercise_id
+),
+ranked_by_muscle AS (
+    SELECT *,
+           ROW_NUMBER() OVER (
+               PARTITION BY primary_muscle
+               ORDER BY times_used DESC, weight DESC
+               ) AS rank_in_muscle
+    FROM exercise_data
+)
+SELECT
+    exercise_id,
+    exercise_name,
+    weight::int    AS weight,
+    reps::int      AS reps,
+    (weight::bigint * reps) AS volume,
+    started_at     AS achieved_at
+FROM ranked_by_muscle
+WHERE rank_in_muscle = 1
+ORDER BY weight DESC
+LIMIT 15
+`
+
+type GetPersonalRecordsByUserRow struct {
+ExerciseID   uuid.UUID `json:"exercise_id"`
+ExerciseName string    `json:"exercise_name"`
+Weight       int32     `json:"weight"`
+Reps         int32     `json:"reps"`
+Volume       int64     `json:"volume"`
+AchievedAt   time.Time `json:"achieved_at"`
+}
+
+func (q *Queries) GetPersonalRecordsByUser(ctx context.Context, userID uuid.UUID) ([]GetPersonalRecordsByUserRow, error) {
+rows, err := q.db.QueryContext(ctx, getPersonalRecordsByUser, userID)
+if err != nil {
+return nil, err
+}
+defer rows.Close()
+var items []GetPersonalRecordsByUserRow
+for rows.Next() {
+var i GetPersonalRecordsByUserRow
+if err := rows.Scan(
+&i.ExerciseID,
+&i.ExerciseName,
+&i.Weight,
+&i.Reps,
+&i.Volume,
+&i.AchievedAt,
+); err != nil {
+return nil, err
+}
+items = append(items, i)
+}
+if err := rows.Close(); err != nil {
+return nil, err
+}
+if err := rows.Err(); err != nil {
+return nil, err
+}
+return items, nil
+}
+
+// GetProgressionByUserAndExercise
+const getProgressionByUserAndExercise = `-- name: GetProgressionByUserAndExercise :many
+SELECT
+    DATE(s.started_at)                  AS date,
+    MAX(sr.weight)::bigint              AS max_weight,
+    SUM(sr.weight::bigint * sr.reps)    AS total_volume
+FROM set_records sr
+JOIN sessions s ON sr.session_id = s.id
+JOIN workout_exercises we ON sr.workout_exercise_id = we.id
+WHERE s.user_id = $1
+  AND s.status = 'completed'
+  AND sr.status = 'completed'
+  AND sr.weight > 0
+  AND s.started_at >= $2
+  AND s.started_at <= $3
+  AND ($4::uuid IS NULL OR we.exercise_id = $4::uuid)
+GROUP BY DATE(s.started_at)
+ORDER BY date
+`
+
+type GetProgressionByUserAndExerciseParams struct {
+UserID      uuid.UUID     `json:"user_id"`
+StartedAt   time.Time     `json:"started_at"`
+StartedAt_2 time.Time     `json:"started_at_2"`
+ExerciseID  uuid.NullUUID `json:"exercise_id"`
+}
+
+type GetProgressionByUserAndExerciseRow struct {
+Date        time.Time `json:"date"`
+MaxWeight   int64     `json:"max_weight"`
+TotalVolume int64     `json:"total_volume"`
+}
+
+func (q *Queries) GetProgressionByUserAndExercise(ctx context.Context, arg GetProgressionByUserAndExerciseParams) ([]GetProgressionByUserAndExerciseRow, error) {
+rows, err := q.db.QueryContext(ctx, getProgressionByUserAndExercise,
+arg.UserID,
+arg.StartedAt,
+arg.StartedAt_2,
+arg.ExerciseID,
+)
+if err != nil {
+return nil, err
+}
+defer rows.Close()
+var items []GetProgressionByUserAndExerciseRow
+for rows.Next() {
+var i GetProgressionByUserAndExerciseRow
+if err := rows.Scan(&i.Date, &i.MaxWeight, &i.TotalVolume); err != nil {
+return nil, err
+}
+items = append(items, i)
+}
+if err := rows.Close(); err != nil {
+return nil, err
+}
+if err := rows.Err(); err != nil {
+return nil, err
+}
+return items, nil
+}
