@@ -84,16 +84,18 @@ type User struct {
 }
 
 type Workout struct {
-	ID          uuid.UUID `json:"id"`
-	UserID      uuid.UUID `json:"user_id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	Type        string    `json:"type"`
-	Intensity   string    `json:"intensity"`
-	Duration    int32     `json:"duration"`
-	ImageUrl    string    `json:"image_url"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID          uuid.UUID     `json:"id"`
+	UserID      uuid.UUID     `json:"user_id"`
+	Name        string        `json:"name"`
+	Description string        `json:"description"`
+	Type        string        `json:"type"`
+	Intensity   string        `json:"intensity"`
+	Duration    int32         `json:"duration"`
+	ImageUrl    string        `json:"image_url"`
+	CreatedAt   time.Time     `json:"created_at"`
+	UpdatedAt   time.Time     `json:"updated_at"`
+	CreatedBy   uuid.NullUUID `json:"created_by"`
+	DeletedAt   sql.NullTime  `json:"deleted_at"`
 }
 
 type WorkoutExercise struct {

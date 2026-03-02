@@ -64,6 +64,9 @@ func (s ServiceRouter) Router(router chi.Router) {
 	// Workouts (authenticated)
 	router.With(AuthMiddleware(s.jwtManager)).Get("/workouts", s.workoutsHandler.ListWorkouts)
 	router.With(AuthMiddleware(s.jwtManager)).Get("/workouts/{id}", s.workoutsHandler.GetWorkout)
+	router.With(AuthMiddleware(s.jwtManager)).Post("/workouts", s.workoutsHandler.CreateWorkout)
+	router.With(AuthMiddleware(s.jwtManager)).Put("/workouts/{id}", s.workoutsHandler.UpdateWorkout)
+	router.With(AuthMiddleware(s.jwtManager)).Delete("/workouts/{id}", s.workoutsHandler.DeleteWorkout)
 
 	// Dashboard (authenticated)
 	router.With(AuthMiddleware(s.jwtManager)).Get("/dashboard", s.dashboardHandler.GetDashboard)

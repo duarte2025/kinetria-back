@@ -38,4 +38,20 @@ type WorkoutRepository interface {
 	//   - []entities.Exercise: list of exercises for the workout
 	//   - error: error if query fails
 	GetByID(ctx context.Context, workoutID, userID uuid.UUID) (*entities.Workout, []entities.Exercise, error)
+
+	// GetByIDOnly returns a workout by ID without user ownership validation.
+	// Used for update/delete operations where ownership is checked in the use case.
+	GetByIDOnly(ctx context.Context, workoutID uuid.UUID) (*entities.Workout, error)
+
+	// Create creates a new workout with exercises (transactional).
+	Create(ctx context.Context, workout entities.Workout, exercises []entities.WorkoutExercise) error
+
+	// Update updates an existing workout and replaces its exercises (transactional).
+	Update(ctx context.Context, workout entities.Workout, exercises []entities.WorkoutExercise) error
+
+	// Delete soft-deletes a workout by setting deleted_at.
+	Delete(ctx context.Context, workoutID uuid.UUID) error
+
+	// HasActiveSessions checks if a workout has any active sessions.
+	HasActiveSessions(ctx context.Context, workoutID uuid.UUID) (bool, error)
 }

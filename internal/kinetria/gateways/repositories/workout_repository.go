@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/entities"
@@ -14,12 +15,13 @@ import (
 
 // WorkoutRepository implements ports.WorkoutRepository using PostgreSQL via SQLC.
 type WorkoutRepository struct {
-	q *queries.Queries
+	q  *queries.Queries
+	db *sql.DB
 }
 
 // NewWorkoutRepository creates a new WorkoutRepository backed by the provided *sql.DB.
 func NewWorkoutRepository(db *sql.DB) *WorkoutRepository {
-	return &WorkoutRepository{q: queries.New(db)}
+	return &WorkoutRepository{q: queries.New(db), db: db}
 }
 
 // ExistsByIDAndUserID checks if a workout exists for the given ID and user ID.
@@ -105,7 +107,7 @@ func (r *WorkoutRepository) GetByID(ctx context.Context, workoutID, userID uuid.
 
 // mapSQLCWorkoutToEntity converts a queries.Workout (SQLC) to entities.Workout (domain).
 func mapSQLCWorkoutToEntity(sqlcWorkout queries.Workout) entities.Workout {
-	return entities.Workout{
+	workout := entities.Workout{
 		ID:          sqlcWorkout.ID,
 		UserID:      sqlcWorkout.UserID,
 		Name:        sqlcWorkout.Name,
@@ -117,6 +119,162 @@ func mapSQLCWorkoutToEntity(sqlcWorkout queries.Workout) entities.Workout {
 		CreatedAt:   sqlcWorkout.CreatedAt,
 		UpdatedAt:   sqlcWorkout.UpdatedAt,
 	}
+	if sqlcWorkout.CreatedBy.Valid {
+		workout.CreatedBy = &sqlcWorkout.CreatedBy.UUID
+	}
+	if sqlcWorkout.DeletedAt.Valid {
+		workout.DeletedAt = &sqlcWorkout.DeletedAt.Time
+	}
+	return workout
+}
+
+// GetByIDOnly returns a workout by ID without user ownership validation.
+func (r *WorkoutRepository) GetByIDOnly(ctx context.Context, workoutID uuid.UUID) (*entities.Workout, error) {
+	row, err := r.q.GetWorkoutByIDOnly(ctx, workoutID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get workout: %w", err)
+	}
+	workout := mapSQLCWorkoutToEntity(row)
+	return &workout, nil
+}
+
+// Create creates a new workout with exercises in a single transaction.
+func (r *WorkoutRepository) Create(ctx context.Context, workout entities.Workout, exercises []entities.WorkoutExercise) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	qtx := r.q.WithTx(tx)
+
+	createdBy := uuid.NullUUID{}
+	if workout.CreatedBy != nil {
+		createdBy = uuid.NullUUID{UUID: *workout.CreatedBy, Valid: true}
+	}
+
+	err = qtx.CreateWorkout(ctx, queries.CreateWorkoutParams{
+		ID:          workout.ID,
+		UserID:      workout.UserID,
+		Name:        workout.Name,
+		Description: workout.Description,
+		Type:        workout.Type,
+		Intensity:   workout.Intensity,
+		Duration:    int32(workout.Duration),
+		ImageUrl:    workout.ImageURL,
+		CreatedBy:   createdBy,
+		CreatedAt:   workout.CreatedAt,
+		UpdatedAt:   workout.UpdatedAt,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create workout: %w", err)
+	}
+
+	for _, ex := range exercises {
+		weight := int32(0)
+		if ex.Weight > 0 {
+			weight = int32(ex.Weight)
+		}
+		err = qtx.CreateWorkoutExercise(ctx, queries.CreateWorkoutExerciseParams{
+			ID:         ex.ID,
+			WorkoutID:  ex.WorkoutID,
+			ExerciseID: ex.ExerciseID,
+			Sets:       int32(ex.Sets),
+			Reps:       ex.Reps,
+			RestTime:   int32(ex.RestTime),
+			Weight:     weight,
+			OrderIndex: int32(ex.OrderIndex),
+			CreatedAt:  workout.CreatedAt,
+			UpdatedAt:  workout.UpdatedAt,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create workout exercise: %w", err)
+		}
+	}
+
+	return tx.Commit()
+}
+
+// Update updates an existing workout and replaces its exercises in a single transaction.
+func (r *WorkoutRepository) Update(ctx context.Context, workout entities.Workout, exercises []entities.WorkoutExercise) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	qtx := r.q.WithTx(tx)
+
+	err = qtx.UpdateWorkout(ctx, queries.UpdateWorkoutParams{
+		ID:          workout.ID,
+		Name:        workout.Name,
+		Description: workout.Description,
+		Type:        workout.Type,
+		Intensity:   workout.Intensity,
+		Duration:    int32(workout.Duration),
+		ImageUrl:    workout.ImageURL,
+		UpdatedAt:   workout.UpdatedAt,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update workout: %w", err)
+	}
+
+	if len(exercises) > 0 {
+		err = qtx.DeleteWorkoutExercises(ctx, workout.ID)
+		if err != nil {
+			return fmt.Errorf("failed to delete workout exercises: %w", err)
+		}
+	}
+
+	for _, ex := range exercises {
+		weight := int32(0)
+		if ex.Weight > 0 {
+			weight = int32(ex.Weight)
+		}
+		err = qtx.CreateWorkoutExercise(ctx, queries.CreateWorkoutExerciseParams{
+			ID:         ex.ID,
+			WorkoutID:  ex.WorkoutID,
+			ExerciseID: ex.ExerciseID,
+			Sets:       int32(ex.Sets),
+			Reps:       ex.Reps,
+			RestTime:   int32(ex.RestTime),
+			Weight:     weight,
+			OrderIndex: int32(ex.OrderIndex),
+			CreatedAt:  workout.UpdatedAt,
+			UpdatedAt:  workout.UpdatedAt,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create workout exercise: %w", err)
+		}
+	}
+
+	return tx.Commit()
+}
+
+// Delete soft-deletes a workout by setting deleted_at.
+func (r *WorkoutRepository) Delete(ctx context.Context, workoutID uuid.UUID) error {
+	now := time.Now().UTC()
+	err := r.q.SoftDeleteWorkout(ctx, queries.SoftDeleteWorkoutParams{
+		ID:        workoutID,
+		DeletedAt: sql.NullTime{Time: now, Valid: true},
+		UpdatedAt: now,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to soft delete workout: %w", err)
+	}
+	return nil
+}
+
+// HasActiveSessions checks if a workout has any active sessions.
+func (r *WorkoutRepository) HasActiveSessions(ctx context.Context, workoutID uuid.UUID) (bool, error) {
+	has, err := r.q.HasActiveSessions(ctx, workoutID)
+	if err != nil {
+		return false, fmt.Errorf("failed to check active sessions: %w", err)
+	}
+	return has, nil
 }
 
 // mapSQLCExerciseToEntity converts queries.ListExercisesByWorkoutIDRow to entities.Exercise.

@@ -6,22 +6,24 @@
 package queries
 
 import (
-	"context"
+"context"
+"database/sql"
+"time"
 
-	"github.com/google/uuid"
+"github.com/google/uuid"
 )
 
 const countWorkoutsByUserID = `-- name: CountWorkoutsByUserID :one
 SELECT COUNT(*)
 FROM workouts
-WHERE user_id = $1
+WHERE (created_by = $1 OR created_by IS NULL) AND deleted_at IS NULL
 `
 
 func (q *Queries) CountWorkoutsByUserID(ctx context.Context, userID uuid.UUID) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countWorkoutsByUserID, userID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
+row := q.db.QueryRowContext(ctx, countWorkoutsByUserID, userID)
+var count int64
+err := row.Scan(&count)
+return count, err
 }
 
 const existsWorkoutByIDAndUserID = `-- name: ExistsWorkoutByIDAndUserID :one
@@ -31,15 +33,15 @@ SELECT EXISTS(
 `
 
 type ExistsWorkoutByIDAndUserIDParams struct {
-	ID     uuid.UUID `json:"id"`
-	UserID uuid.UUID `json:"user_id"`
+ID     uuid.UUID `json:"id"`
+UserID uuid.UUID `json:"user_id"`
 }
 
 func (q *Queries) ExistsWorkoutByIDAndUserID(ctx context.Context, arg ExistsWorkoutByIDAndUserIDParams) (bool, error) {
-	row := q.db.QueryRowContext(ctx, existsWorkoutByIDAndUserID, arg.ID, arg.UserID)
-	var exists bool
-	err := row.Scan(&exists)
-	return exists, err
+row := q.db.QueryRowContext(ctx, existsWorkoutByIDAndUserID, arg.ID, arg.UserID)
+var exists bool
+err := row.Scan(&exists)
+return exists, err
 }
 
 const getFirstWorkoutByUserID = `-- name: GetFirstWorkoutByUserID :one
@@ -53,29 +55,33 @@ SELECT
     duration, 
     image_url, 
     created_at, 
-    updated_at
+    updated_at,
+    created_by,
+    deleted_at
 FROM workouts
-WHERE user_id = $1
+WHERE user_id = $1 AND deleted_at IS NULL
 ORDER BY created_at ASC
 LIMIT 1
 `
 
 func (q *Queries) GetFirstWorkoutByUserID(ctx context.Context, userID uuid.UUID) (Workout, error) {
-	row := q.db.QueryRowContext(ctx, getFirstWorkoutByUserID, userID)
-	var i Workout
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.Name,
-		&i.Description,
-		&i.Type,
-		&i.Intensity,
-		&i.Duration,
-		&i.ImageUrl,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
+row := q.db.QueryRowContext(ctx, getFirstWorkoutByUserID, userID)
+var i Workout
+err := row.Scan(
+&i.ID,
+&i.UserID,
+&i.Name,
+&i.Description,
+&i.Type,
+&i.Intensity,
+&i.Duration,
+&i.ImageUrl,
+&i.CreatedAt,
+&i.UpdatedAt,
+&i.CreatedBy,
+&i.DeletedAt,
+)
+return i, err
 }
 
 const getWorkoutByID = `-- name: GetWorkoutByID :one
@@ -89,78 +95,245 @@ SELECT
     duration, 
     image_url, 
     created_at, 
-    updated_at
+    updated_at,
+    created_by,
+    deleted_at
 FROM workouts
-WHERE id = $1 AND user_id = $2
+WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL
 `
 
 type GetWorkoutByIDParams struct {
-	ID     uuid.UUID `json:"id"`
-	UserID uuid.UUID `json:"user_id"`
+ID     uuid.UUID `json:"id"`
+UserID uuid.UUID `json:"user_id"`
 }
 
 func (q *Queries) GetWorkoutByID(ctx context.Context, arg GetWorkoutByIDParams) (Workout, error) {
-	row := q.db.QueryRowContext(ctx, getWorkoutByID, arg.ID, arg.UserID)
-	var i Workout
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.Name,
-		&i.Description,
-		&i.Type,
-		&i.Intensity,
-		&i.Duration,
-		&i.ImageUrl,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
+row := q.db.QueryRowContext(ctx, getWorkoutByID, arg.ID, arg.UserID)
+var i Workout
+err := row.Scan(
+&i.ID,
+&i.UserID,
+&i.Name,
+&i.Description,
+&i.Type,
+&i.Intensity,
+&i.Duration,
+&i.ImageUrl,
+&i.CreatedAt,
+&i.UpdatedAt,
+&i.CreatedBy,
+&i.DeletedAt,
+)
+return i, err
+}
+
+const getWorkoutByIDOnly = `-- name: GetWorkoutByIDOnly :one
+SELECT id, user_id, name, description, type, intensity, duration, image_url, created_at, updated_at, created_by, deleted_at
+FROM workouts
+WHERE id = $1 AND deleted_at IS NULL
+`
+
+func (q *Queries) GetWorkoutByIDOnly(ctx context.Context, id uuid.UUID) (Workout, error) {
+row := q.db.QueryRowContext(ctx, getWorkoutByIDOnly, id)
+var i Workout
+err := row.Scan(
+&i.ID,
+&i.UserID,
+&i.Name,
+&i.Description,
+&i.Type,
+&i.Intensity,
+&i.Duration,
+&i.ImageUrl,
+&i.CreatedAt,
+&i.UpdatedAt,
+&i.CreatedBy,
+&i.DeletedAt,
+)
+return i, err
 }
 
 const listWorkoutsByUserID = `-- name: ListWorkoutsByUserID :many
-SELECT id, user_id, name, description, type, intensity, duration, image_url, created_at, updated_at
+SELECT id, user_id, name, description, type, intensity, duration, image_url, created_at, updated_at, created_by, deleted_at
 FROM workouts
-WHERE user_id = $1
+WHERE (created_by = $1 OR created_by IS NULL) AND deleted_at IS NULL
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3
 `
 
 type ListWorkoutsByUserIDParams struct {
-	UserID uuid.UUID `json:"user_id"`
-	Limit  int32     `json:"limit"`
-	Offset int32     `json:"offset"`
+UserID uuid.UUID `json:"user_id"`
+Limit  int32     `json:"limit"`
+Offset int32     `json:"offset"`
 }
 
 func (q *Queries) ListWorkoutsByUserID(ctx context.Context, arg ListWorkoutsByUserIDParams) ([]Workout, error) {
-	rows, err := q.db.QueryContext(ctx, listWorkoutsByUserID, arg.UserID, arg.Limit, arg.Offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Workout
-	for rows.Next() {
-		var i Workout
-		if err := rows.Scan(
-			&i.ID,
-			&i.UserID,
-			&i.Name,
-			&i.Description,
-			&i.Type,
-			&i.Intensity,
-			&i.Duration,
-			&i.ImageUrl,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+rows, err := q.db.QueryContext(ctx, listWorkoutsByUserID, arg.UserID, arg.Limit, arg.Offset)
+if err != nil {
+return nil, err
+}
+defer rows.Close()
+var items []Workout
+for rows.Next() {
+var i Workout
+if err := rows.Scan(
+&i.ID,
+&i.UserID,
+&i.Name,
+&i.Description,
+&i.Type,
+&i.Intensity,
+&i.Duration,
+&i.ImageUrl,
+&i.CreatedAt,
+&i.UpdatedAt,
+&i.CreatedBy,
+&i.DeletedAt,
+); err != nil {
+return nil, err
+}
+items = append(items, i)
+}
+if err := rows.Close(); err != nil {
+return nil, err
+}
+if err := rows.Err(); err != nil {
+return nil, err
+}
+return items, nil
+}
+
+const createWorkout = `-- name: CreateWorkout :exec
+INSERT INTO workouts (id, user_id, name, description, type, intensity, duration, image_url, created_by, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+`
+
+type CreateWorkoutParams struct {
+ID          uuid.UUID     `json:"id"`
+UserID      uuid.UUID     `json:"user_id"`
+Name        string        `json:"name"`
+Description string        `json:"description"`
+Type        string        `json:"type"`
+Intensity   string        `json:"intensity"`
+Duration    int32         `json:"duration"`
+ImageUrl    string        `json:"image_url"`
+CreatedBy   uuid.NullUUID `json:"created_by"`
+CreatedAt   time.Time     `json:"created_at"`
+UpdatedAt   time.Time     `json:"updated_at"`
+}
+
+func (q *Queries) CreateWorkout(ctx context.Context, arg CreateWorkoutParams) error {
+_, err := q.db.ExecContext(ctx, createWorkout,
+arg.ID,
+arg.UserID,
+arg.Name,
+arg.Description,
+arg.Type,
+arg.Intensity,
+arg.Duration,
+arg.ImageUrl,
+arg.CreatedBy,
+arg.CreatedAt,
+arg.UpdatedAt,
+)
+return err
+}
+
+const updateWorkout = `-- name: UpdateWorkout :exec
+UPDATE workouts SET name=$2, description=$3, type=$4, intensity=$5, duration=$6, image_url=$7, updated_at=$8
+WHERE id=$1 AND deleted_at IS NULL
+`
+
+type UpdateWorkoutParams struct {
+ID          uuid.UUID `json:"id"`
+Name        string    `json:"name"`
+Description string    `json:"description"`
+Type        string    `json:"type"`
+Intensity   string    `json:"intensity"`
+Duration    int32     `json:"duration"`
+ImageUrl    string    `json:"image_url"`
+UpdatedAt   time.Time `json:"updated_at"`
+}
+
+func (q *Queries) UpdateWorkout(ctx context.Context, arg UpdateWorkoutParams) error {
+_, err := q.db.ExecContext(ctx, updateWorkout,
+arg.ID,
+arg.Name,
+arg.Description,
+arg.Type,
+arg.Intensity,
+arg.Duration,
+arg.ImageUrl,
+arg.UpdatedAt,
+)
+return err
+}
+
+const softDeleteWorkout = `-- name: SoftDeleteWorkout :exec
+UPDATE workouts SET deleted_at=$2, updated_at=$3 WHERE id=$1 AND deleted_at IS NULL
+`
+
+type SoftDeleteWorkoutParams struct {
+ID        uuid.UUID    `json:"id"`
+DeletedAt sql.NullTime `json:"deleted_at"`
+UpdatedAt time.Time    `json:"updated_at"`
+}
+
+func (q *Queries) SoftDeleteWorkout(ctx context.Context, arg SoftDeleteWorkoutParams) error {
+_, err := q.db.ExecContext(ctx, softDeleteWorkout, arg.ID, arg.DeletedAt, arg.UpdatedAt)
+return err
+}
+
+const hasActiveSessions = `-- name: HasActiveSessions :one
+SELECT EXISTS(SELECT 1 FROM sessions WHERE workout_id=$1 AND status='active') AS "exists"
+`
+
+func (q *Queries) HasActiveSessions(ctx context.Context, workoutID uuid.UUID) (bool, error) {
+row := q.db.QueryRowContext(ctx, hasActiveSessions, workoutID)
+var exists bool
+err := row.Scan(&exists)
+return exists, err
+}
+
+const createWorkoutExercise = `-- name: CreateWorkoutExercise :exec
+INSERT INTO workout_exercises (id, workout_id, exercise_id, sets, reps, rest_time, weight, order_index, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+`
+
+type CreateWorkoutExerciseParams struct {
+ID         uuid.UUID `json:"id"`
+WorkoutID  uuid.UUID `json:"workout_id"`
+ExerciseID uuid.UUID `json:"exercise_id"`
+Sets       int32     `json:"sets"`
+Reps       string    `json:"reps"`
+RestTime   int32     `json:"rest_time"`
+Weight     int32     `json:"weight"`
+OrderIndex int32     `json:"order_index"`
+CreatedAt  time.Time `json:"created_at"`
+UpdatedAt  time.Time `json:"updated_at"`
+}
+
+func (q *Queries) CreateWorkoutExercise(ctx context.Context, arg CreateWorkoutExerciseParams) error {
+_, err := q.db.ExecContext(ctx, createWorkoutExercise,
+arg.ID,
+arg.WorkoutID,
+arg.ExerciseID,
+arg.Sets,
+arg.Reps,
+arg.RestTime,
+arg.Weight,
+arg.OrderIndex,
+arg.CreatedAt,
+arg.UpdatedAt,
+)
+return err
+}
+
+const deleteWorkoutExercises = `-- name: DeleteWorkoutExercises :exec
+DELETE FROM workout_exercises WHERE workout_id=$1
+`
+
+func (q *Queries) DeleteWorkoutExercises(ctx context.Context, workoutID uuid.UUID) error {
+_, err := q.db.ExecContext(ctx, deleteWorkoutExercises, workoutID)
+return err
 }
