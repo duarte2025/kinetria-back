@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/kinetria/kinetria-back/internal/kinetria/domain/entities"
+	"github.com/kinetria/kinetria-back/internal/kinetria/domain/ports"
 )
 
 // mockUserRepository is a mock implementation of ports.UserRepository for testing.
@@ -105,4 +106,16 @@ func (m *mockSessionRepository) GetCompletedSessionsByUserAndDateRange(_ context
 		return nil, m.completedErr
 	}
 	return m.completedSessions, nil
+}
+
+func (m *mockSessionRepository) GetStatsByUserAndPeriod(_ context.Context, _ uuid.UUID, _, _ time.Time) (*ports.SessionStats, error) {
+	return &ports.SessionStats{}, nil
+}
+
+func (m *mockSessionRepository) GetFrequencyByUserAndPeriod(_ context.Context, _ uuid.UUID, _, _ time.Time) ([]ports.FrequencyData, error) {
+	return nil, nil
+}
+
+func (m *mockSessionRepository) GetSessionsForStreak(_ context.Context, _ uuid.UUID) ([]time.Time, error) {
+	return nil, nil
 }
