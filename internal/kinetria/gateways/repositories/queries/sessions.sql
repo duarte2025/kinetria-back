@@ -35,3 +35,35 @@ WHERE user_id = $1
   AND DATE(started_at) BETWEEN $2 AND $3
 ORDER BY started_at DESC;
 
+
+-- name: GetStatsByUserAndPeriod :one
+SELECT
+    COUNT(*)::bigint AS total_workouts,
+    COALESCE(SUM(EXTRACT(EPOCH FROM (finished_at - started_at)) / 60), 0)::bigint AS total_time_minutes
+FROM sessions
+WHERE user_id = $1
+  AND status = 'completed'
+  AND started_at >= $2
+  AND started_at <= $3;
+
+-- name: GetFrequencyByUserAndPeriod :many
+SELECT
+    DATE(started_at) AS date,
+    COUNT(*)::bigint AS count
+FROM sessions
+WHERE user_id = $1
+  AND status = 'completed'
+  AND started_at >= $2
+  AND started_at <= $3
+GROUP BY DATE(started_at)
+ORDER BY date;
+
+-- name: GetSessionsForStreak :many
+SELECT
+    DATE(started_at)::text AS date
+FROM sessions
+WHERE user_id = $1
+  AND status = 'completed'
+  AND started_at >= NOW() - INTERVAL '365 days'
+GROUP BY DATE(started_at)
+ORDER BY date DESC;

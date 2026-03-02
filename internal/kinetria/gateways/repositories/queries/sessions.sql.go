@@ -198,3 +198,116 @@ func (q *Queries) UpdateSessionStatus(ctx context.Context, arg UpdateSessionStat
 	}
 	return result.RowsAffected()
 }
+
+// GetStatsByUserAndPeriod
+const getStatsByUserAndPeriod = `-- name: GetStatsByUserAndPeriod :one
+SELECT
+    COUNT(*)::bigint AS total_workouts,
+    COALESCE(SUM(EXTRACT(EPOCH FROM (finished_at - started_at)) / 60), 0)::bigint AS total_time_minutes
+FROM sessions
+WHERE user_id = $1
+  AND status = 'completed'
+  AND started_at >= $2
+  AND started_at <= $3
+`
+
+type GetStatsByUserAndPeriodParams struct {
+UserID      uuid.UUID `json:"user_id"`
+StartedAt   time.Time `json:"started_at"`
+StartedAt_2 time.Time `json:"started_at_2"`
+}
+
+type GetStatsByUserAndPeriodRow struct {
+TotalWorkouts    int64 `json:"total_workouts"`
+TotalTimeMinutes int64 `json:"total_time_minutes"`
+}
+
+func (q *Queries) GetStatsByUserAndPeriod(ctx context.Context, arg GetStatsByUserAndPeriodParams) (GetStatsByUserAndPeriodRow, error) {
+row := q.db.QueryRowContext(ctx, getStatsByUserAndPeriod, arg.UserID, arg.StartedAt, arg.StartedAt_2)
+var i GetStatsByUserAndPeriodRow
+err := row.Scan(&i.TotalWorkouts, &i.TotalTimeMinutes)
+return i, err
+}
+
+// GetFrequencyByUserAndPeriod
+const getFrequencyByUserAndPeriod = `-- name: GetFrequencyByUserAndPeriod :many
+SELECT
+    DATE(started_at) AS date,
+    COUNT(*)::bigint AS count
+FROM sessions
+WHERE user_id = $1
+  AND status = 'completed'
+  AND started_at >= $2
+  AND started_at <= $3
+GROUP BY DATE(started_at)
+ORDER BY date
+`
+
+type GetFrequencyByUserAndPeriodParams struct {
+UserID      uuid.UUID `json:"user_id"`
+StartedAt   time.Time `json:"started_at"`
+StartedAt_2 time.Time `json:"started_at_2"`
+}
+
+type GetFrequencyByUserAndPeriodRow struct {
+Date  time.Time `json:"date"`
+Count int64     `json:"count"`
+}
+
+func (q *Queries) GetFrequencyByUserAndPeriod(ctx context.Context, arg GetFrequencyByUserAndPeriodParams) ([]GetFrequencyByUserAndPeriodRow, error) {
+rows, err := q.db.QueryContext(ctx, getFrequencyByUserAndPeriod, arg.UserID, arg.StartedAt, arg.StartedAt_2)
+if err != nil {
+return nil, err
+}
+defer rows.Close()
+var items []GetFrequencyByUserAndPeriodRow
+for rows.Next() {
+var i GetFrequencyByUserAndPeriodRow
+if err := rows.Scan(&i.Date, &i.Count); err != nil {
+return nil, err
+}
+items = append(items, i)
+}
+if err := rows.Close(); err != nil {
+return nil, err
+}
+if err := rows.Err(); err != nil {
+return nil, err
+}
+return items, nil
+}
+
+// GetSessionsForStreak
+const getSessionsForStreak = `-- name: GetSessionsForStreak :many
+SELECT
+    DATE(started_at)::text AS date
+FROM sessions
+WHERE user_id = $1
+  AND status = 'completed'
+  AND started_at >= NOW() - INTERVAL '365 days'
+GROUP BY DATE(started_at)
+ORDER BY date DESC
+`
+
+func (q *Queries) GetSessionsForStreak(ctx context.Context, userID uuid.UUID) ([]string, error) {
+rows, err := q.db.QueryContext(ctx, getSessionsForStreak, userID)
+if err != nil {
+return nil, err
+}
+defer rows.Close()
+var items []string
+for rows.Next() {
+var date string
+if err := rows.Scan(&date); err != nil {
+return nil, err
+}
+items = append(items, date)
+}
+if err := rows.Close(); err != nil {
+return nil, err
+}
+if err := rows.Err(); err != nil {
+return nil, err
+}
+return items, nil
+}
